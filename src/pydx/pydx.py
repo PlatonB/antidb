@@ -10,8 +10,17 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v1.1.0'
+__version__ = 'v1.2.0'
 __authors__ = ['Platon Bykadorov (platon.work@gmail.com), 2023']
+
+
+def count_exec_time(any_func):
+    def wrapper(*args):
+        exec_time_start = datetime.now()
+        any_func(*args)
+        return (any_func.__name__,
+                datetime.now() - exec_time_start)
+    return wrapper
 
 
 class FileNotFoundError(Exception):
@@ -44,29 +53,29 @@ class Idx():
         self.compr_chunk_size = compr_chunk_size
         self.compr_chunk_elems_quan = compr_chunk_elems_quan
         self.unidx_lines_quan = unidx_lines_quan
-        self.bench = {}
+        self.bench = []
 
     def idx(self, your_line_parser):
         def mng():
             if not os.path.exists(self.db_zst_path):
-                self.crt_db_zst()
+                self.bench.append(self.crt_db_zst())
                 os.remove(self.db_file_path)
             if not os.path.exists(self.full_idx_tmp_path) \
                     and not os.path.exists(self.full_idx_path):
                 self.crt_full_idx_tmp(your_line_parser)
             if not os.path.exists(self.full_idx_tmp_srtd_path) \
                     and not os.path.exists(self.full_idx_path):
-                self.crt_full_idx_tmp_srtd()
+                self.bench.append(self.crt_full_idx_tmp_srtd())
                 os.remove(self.full_idx_tmp_path)
             if not os.path.exists(self.full_idx_path):
-                self.crt_full_idx()
+                self.bench.append(self.crt_full_idx())
                 os.remove(self.full_idx_tmp_srtd_path)
             if not os.path.exists(self.mem_idx_path):
-                self.crt_mem_idx()
+                self.bench.append(self.crt_mem_idx())
         return mng
 
+    @count_exec_time
     def crt_db_zst(self):
-        crt_db_zst_start = datetime.now()
         with open(self.db_file_path) as src_txt_opened:
             with TextIOWrapper(SeekableZstdFile(self.db_zst_path,
                                                 mode='w',
@@ -77,10 +86,9 @@ class Idx():
                     if not src_txt_chunk:
                         break
                     db_zst_opened.write(src_txt_chunk)
-        self.bench['crt_db_zst_time'] = str(datetime.now() - crt_db_zst_start)
 
+    @count_exec_time
     def crt_full_idx_tmp(self, your_line_parser):
-        crt_full_idx_tmp_start = datetime.now()
         with TextIOWrapper(SeekableZstdFile(self.db_zst_path,
                                             mode='r')) as db_zst_opened:
             with open(self.full_idx_tmp_path,
@@ -102,7 +110,7 @@ class Idx():
                     your_line_parser_out = your_line_parser(db_zst_line)
                     if not your_line_parser_out:
                         continue
-                    elif type(your_line_parser_out) in [str, int, float]:
+                    elif type(your_line_parser_out) in [str, int, float, Decimal]:
                         chunk.append(f'{your_line_parser_out},{db_zst_lstart}')
                     elif type(your_line_parser_out) in [list, tuple, set]:
                         for your_val in your_line_parser_out:
@@ -112,15 +120,13 @@ class Idx():
                         full_idx_tmp_opened.write('\n'.join(chunk) + '\n')
                         chunk = []
                         chunk_len = 0
-        self.bench['crt_full_idx_tmp_time'] = str(datetime.now() - crt_full_idx_tmp_start)
 
+    @count_exec_time
     def crt_full_idx_tmp_srtd(self):
-        crt_full_idx_tmp_srtd_start = datetime.now()
         os.system(f"sort -t ',' {self.full_idx_tmp_path} > {self.full_idx_tmp_srtd_path}")
-        self.bench['crt_full_idx_tmp_srtd_time'] = str(datetime.now() - crt_full_idx_tmp_srtd_start)
 
+    @count_exec_time
     def crt_full_idx(self):
-        crt_full_idx_start = datetime.now()
         with open(self.full_idx_tmp_srtd_path) as full_idx_tmp_srtd_opened:
             with TextIOWrapper(SeekableZstdFile(self.full_idx_path,
                                                 mode='w',
@@ -131,10 +137,9 @@ class Idx():
                     if not full_idx_tmp_srtd_chunk:
                         break
                     full_idx_opened.write(full_idx_tmp_srtd_chunk)
-        self.bench['crt_full_idx_time'] = str(datetime.now() - crt_full_idx_start)
 
+    @count_exec_time
     def crt_mem_idx(self):
-        crt_mem_idx_start = datetime.now()
         with TextIOWrapper(SeekableZstdFile(self.full_idx_path,
                                             mode='r')) as full_idx_opened:
             with TextIOWrapper(ZstdFile(self.mem_idx_path,
@@ -150,7 +155,6 @@ class Idx():
                     for full_idx_line_ind in range(self.unidx_lines_quan):
                         if not full_idx_opened.readline():
                             break
-        self.bench['crt_mem_idx_time'] = str(datetime.now() - crt_mem_idx_start)
 
 
 class Prs(Idx):
