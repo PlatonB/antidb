@@ -10,7 +10,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v1.0.0'
+__version__ = 'v1.1.0'
 __authors__ = ['Platon Bykadorov (platon.work@gmail.com), 2023']
 
 
@@ -85,10 +85,11 @@ class Idx():
                                             mode='r')) as db_zst_opened:
             with open(self.full_idx_tmp_path,
                       mode='w') as full_idx_tmp_opened:
-                if '.vcf' in os.path.basename(self.db_zst_path):
-                    for db_zst_line in db_zst_opened:
-                        if not db_zst_line.startswith('##'):
-                            break
+                while True:
+                    db_zst_lstart = db_zst_opened.tell()
+                    if not db_zst_opened.readline().startswith('#'):
+                        db_zst_opened.seek(db_zst_lstart)
+                        break
                 chunk = []
                 chunk_len = 0
                 while True:
