@@ -50,7 +50,7 @@ def add_args():
 import json
 import os
 from your_tool_cli import add_args
-from pydx import Idx, Prs
+from pydx import Idx, Prs, count_exec_time
 
 # Getting from CLI path to
 # DB-file, path to directory
@@ -67,17 +67,19 @@ idx = Idx(args.db_file_path,
 
 
 @idx.idx
-def rsmerged_line_parser(db_zst_line):
+def parse_rsmerged_line(rsmerged_zst_line):
     '''
     An exemplary algorithm that pulls indexable rsIDs from each line
     of the refsnp-merged.json table. This table can be downloaded from
     https://ftp.ncbi.nih.gov/snp/latest_release/JSON/refsnp-merged.json.bz2.
-    Don't forget to decompress it: bzip2 -d /path/to/refsnp-merged.json.bz2
+    Don't forget to decompress it: bzip2 -d /path/to/refsnp-merged.json.bz2.
+    Any other function can be in place of this one. Your function can
+    return None or another empty value if nothing is found in the line.
     '''
-    db_zst_obj = json.loads(db_zst_line)
-    rsmerged_line_parser_out = [db_zst_obj['refsnp_id']] + \
-        db_zst_obj['merged_snapshot_data']['merged_into']
-    return rsmerged_line_parser_out
+    rsmerged_zst_obj = json.loads(rsmerged_zst_line)
+    rs_ids = [rsmerged_zst_obj['refsnp_id']] + \
+        rsmerged_zst_obj['merged_snapshot_data']['merged_into']
+    return rs_ids
 
 
 # Compressing DB-file and
@@ -95,42 +97,60 @@ def rsmerged_line_parser(db_zst_line):
 # Full-index is usually very
 # big, while mem-index does
 # not overload RAM at all.
-rsmerged_line_parser()
+parse_rsmerged_line()
 
 # Optional. Writing into separate file the results
 # of index creation performance measurement.
 if args.bench_file_path and not os.path.exists(args.bench_file_path):
     with open(args.bench_file_path, 'w') as bench_file_opened:
-        for file_time in idx.bench.items():
-            bench_file_opened.write(f'{file_time[0]}\t{file_time[1]}\n')
+        for func_name, exec_time in idx.bench:
+            bench_file_opened.write(f'{func_name}\t{exec_time}\n')
 
-# Initialize the class
-# containing the parser
-# method. The latter can
-# create a generator that
-# one by one returns DB-file
-# strings with found values.
+# Initialization of the class
+# containing the parser method.
 prs = Prs(args.db_file_path,
           args.idx_prefix)
 
-# Instant search for your values in the
-# indexed DB file. There are two search
-# strategies: 1. you create an array
-# of values and pass it to the parser;
-# 2. you create the parser multiple times,
-# passing to it a single value each
-# time. Values can be of any type: the
-# parser itself converts them to str.
-trg_file1_path = os.path.join(args.trg_dir_path,
-                              'out_1.txt')
-with open(trg_file1_path, 'w') as trg_file1_opened:
-    for db_zst_found_line in prs.prs(['332',
-                                      '1192046386']):
-        trg_file1_opened.write(db_zst_found_line)
-trg_file2_path = os.path.join(args.trg_dir_path,
-                              'out_2.txt')
-with open(trg_file2_path, 'w') as trg_file2_opened:
-    for rs_id in [332, 1192046386]:
-        for db_zst_found_line in prs.prs(rs_id):
-            trg_file2_opened.write(db_zst_found_line)
+
+@count_exec_time
+def your_prs_task(args, prs):
+    '''
+    Instant search for your values in the indexed DB file.
+    There are two search strategies: 1. you create an array
+    of values and pass it to the parser; 2. you create
+    the parser multiple times, passing to it a single
+    value each time. Values can be of any type: the
+    parser itself converts them to str. The object
+    of prs.prs is a generator that one by one
+    returns DB-file lines with found values.
+    '''
+    trg_file1_path = os.path.join(args.trg_dir_path,
+                                  'out_1.txt')
+    with open(trg_file1_path, 'w') as trg_file1_opened:
+        for db_zst_found_line in prs.prs(['332',
+                                          '1192046386']):
+            trg_file1_opened.write(db_zst_found_line)
+    trg_file2_path = os.path.join(args.trg_dir_path,
+                                  'out_2.txt')
+    with open(trg_file2_path, 'w') as trg_file2_opened:
+        for rs_id in [332, 1192046386]:
+            for db_zst_found_line in prs.prs(rs_id):
+                trg_file2_opened.write(db_zst_found_line)
+
+
+# Enjoy the amazing search speed:).
+func_name, exec_time = your_prs_task(args, prs)
+if args.bench_file_path:
+    with open(args.bench_file_path, 'a') as bench_file_opened:
+        bench_file_opened.write(f'{func_name}\t{exec_time}\n')
+
+'''
+bench.txt:
+
+crt_db_zst	0:02:55.958405
+crt_full_idx_tmp_srtd	0:00:31.891816
+crt_full_idx	0:00:17.979250
+crt_mem_idx	0:00:08.692710
+your_prs_task	0:00:00.102855
+'''
 ```
