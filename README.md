@@ -23,8 +23,8 @@ prs = Prs(dbsnp_vcf_path,
 for rs_id in ['rs1009150',
               'rs12044852',
               'rs4902496']:
-    print(prs.prs(rs_id))
-    print('')
+    for dbsnp_zst_line in prs.prs(rs_id):
+        print(dbsnp_zst_line)
 ```
 
 ## Quick start
