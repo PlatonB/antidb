@@ -10,7 +10,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v1.2.0'
+__version__ = 'v1.2.1'
 __authors__ = ['Platon Bykadorov (platon.work@gmail.com), 2023']
 
 
@@ -19,7 +19,8 @@ def count_exec_time(any_func):
         exec_time_start = datetime.now()
         any_func(*args)
         return (any_func.__name__,
-                datetime.now() - exec_time_start)
+                str(datetime.now() -
+                    exec_time_start))
     return wrapper
 
 
