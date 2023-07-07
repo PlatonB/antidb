@@ -1,5 +1,34 @@
 # pydx
-## your_tool_cli.py
+## Super quick start
+```
+from pydx import Idx, Prs
+
+dbsnp_vcf_path = '/mnt/Storage/databases/dbSNP_platon/GCF_000001405.40.vcf'
+idx_prefix = 'allrsids'
+
+idx = Idx(dbsnp_vcf_path,
+          idx_prefix)
+
+
+@idx.idx
+def get_id(dbsnp_zst_line):
+    return dbsnp_zst_line.split('\t')[2]
+
+
+get_id()
+
+prs = Prs(dbsnp_vcf_path,
+          idx_prefix)
+
+for rs_id in ['rs1009150',
+              'rs12044852',
+              'rs4902496']:
+    print(prs.prs(rs_id))
+    print('')
+```
+
+## Quick start
+### your_tool_cli.py
 ```
 from argparse import ArgumentParser
 
@@ -16,7 +45,7 @@ def add_args():
                             help='Path for index creation performance measurement results file')
     return arg_parser.parse_args()
 ```
-## your_tool.py
+### your_tool.py
 ```
 import json
 import os
@@ -88,20 +117,20 @@ prs = Prs(args.db_file_path,
 # indexed DB file. There are two search
 # strategies: 1. you create an array
 # of values and pass it to the parser;
-# 2. you call the parser multiple times,
+# 2. you create the parser multiple times,
 # passing to it a single value each
 # time. Values can be of any type: the
 # parser itself converts them to str.
 trg_file1_path = os.path.join(args.trg_dir_path,
                               'out_1.txt')
 with open(trg_file1_path, 'w') as trg_file1_opened:
-    for rs_id in [332, 1192046386]:
-        for db_zst_found_line in prs.prs(rs_id):
-            trg_file1_opened.write(db_zst_found_line)
+    for db_zst_found_line in prs.prs(['332',
+                                      '1192046386']):
+        trg_file1_opened.write(db_zst_found_line)
 trg_file2_path = os.path.join(args.trg_dir_path,
                               'out_2.txt')
 with open(trg_file2_path, 'w') as trg_file2_opened:
-    for db_zst_found_line in prs.prs(['332',
-                                      '1192046386']):
-        trg_file2_opened.write(db_zst_found_line)
+    for rs_id in [332, 1192046386]:
+        for db_zst_found_line in prs.prs(rs_id):
+            trg_file2_opened.write(db_zst_found_line)
 ```
