@@ -4,13 +4,14 @@ import sys; sys.dont_write_bytecode = True
 import os
 from datetime import datetime
 from io import TextIOWrapper
+from functools import wraps
 from decimal import Decimal
 from bisect import bisect
 from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v1.2.1'
+__version__ = 'v1.3.0'
 __authors__ = ['Platon Bykadorov (platon.work@gmail.com), 2023']
 
 
@@ -57,6 +58,7 @@ class Idx():
         self.bench = []
 
     def idx(self, your_line_parser):
+        @wraps(your_line_parser)
         def mng():
             if not os.path.exists(self.db_zst_path):
                 self.bench.append(self.crt_db_zst())
