@@ -11,7 +11,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v1.3.0'
+__version__ = 'v1.3.1'
 __authors__ = ['Platon Bykadorov (platon.work@gmail.com), 2023']
 
 
@@ -55,26 +55,26 @@ class Idx():
         self.compr_chunk_size = compr_chunk_size
         self.compr_chunk_elems_quan = compr_chunk_elems_quan
         self.unidx_lines_quan = unidx_lines_quan
-        self.bench = []
+        self.perf = []
 
     def idx(self, your_line_parser):
         @wraps(your_line_parser)
         def mng():
             if not os.path.exists(self.db_zst_path):
-                self.bench.append(self.crt_db_zst())
+                self.perf.append(self.crt_db_zst())
                 os.remove(self.db_file_path)
             if not os.path.exists(self.full_idx_tmp_path) \
                     and not os.path.exists(self.full_idx_path):
                 self.crt_full_idx_tmp(your_line_parser)
             if not os.path.exists(self.full_idx_tmp_srtd_path) \
                     and not os.path.exists(self.full_idx_path):
-                self.bench.append(self.crt_full_idx_tmp_srtd())
+                self.perf.append(self.crt_full_idx_tmp_srtd())
                 os.remove(self.full_idx_tmp_path)
             if not os.path.exists(self.full_idx_path):
-                self.bench.append(self.crt_full_idx())
+                self.perf.append(self.crt_full_idx())
                 os.remove(self.full_idx_tmp_srtd_path)
             if not os.path.exists(self.mem_idx_path):
-                self.bench.append(self.crt_mem_idx())
+                self.perf.append(self.crt_mem_idx())
         return mng
 
     @count_exec_time
