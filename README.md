@@ -1,7 +1,7 @@
-# pydx
+# antidb
 ## Super quick start
 ```
-from pydx import Idx, Prs
+from antidb import Idx, Prs
 
 dbsnp_vcf_path = '/mnt/Storage/databases/dbSNP_platon/GCF_000001405.40.vcf'
 idx_prefix = 'allrsids'
@@ -50,7 +50,7 @@ def add_args():
 import json
 import os
 from your_tool_cli import add_args
-from pydx import Idx, Prs, count_exec_time
+from antidb import Idx, Prs, count_exec_time
 
 # Getting from CLI path to
 # DB-file, path to directory
