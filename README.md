@@ -153,9 +153,15 @@ with open(perf_file_path, 'w') as perf_file_opened:
 
 #### Performance measurement results
 ##### ann_perf_2023-07-09 20:45:36.102376.json
-- `dbsnp_idx` - indexing `GnomAD`- and `CLN`-containing strings of dbSNP VCF;
+- `dbsnp_idx` - indexing `GnomAD`- and `CLN`-containing lines of dbSNP VCF;
+  - `crt_db_zst` - compressing indexable file; output is "DB";
+  - `crt_full_idx_tmp` - indexing DB; output is "temporary full index";
+  - `crt_full_idx_tmp_srtd` - sorting temporary full index by indexed DB elements;
+  - `crt_full_idx` - compressing sorted temporary full index; output is "full index";
+  - `crt_mem_idx` - selective indexing of full index;
 - `rsmerged_idx` - indexing all lines of rsmerged JSON;
-- `ann` - querying 2842 rsIDs by dbSNP VCF and rsmerged JSON.
+  - <...>
+- `ann` - querying 2842 rsIDs by indexed dbSNP VCF and indexed rsmerged JSON.
 ```
 {
     "dbsnp_idx": [
