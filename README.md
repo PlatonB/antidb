@@ -1,5 +1,5 @@
 # antidb
-## Super quick start
+## Quick start
 ```
 from antidb import Idx, Prs
 
@@ -27,130 +27,107 @@ for rs_id in ['rs1009150',
         print(dbsnp_zst_line)
 ```
 
-## Quick start
-### your_tool_cli.py
+## App example
+### Bioinformatic annotator template
 ```
-from argparse import ArgumentParser
-
-
-def add_args():
-    arg_parser = ArgumentParser()
-    arg_parser.add_argument('-D', '--db-file-path', required=True, metavar='str', dest='db_file_path', type=str,
-                            help='Path to indexable multi-line text file (Uncompressed or compressed via Seekable zstd)')
-    arg_parser.add_argument('-P', '--idx-prefix', required=True, metavar='str', dest='idx_prefix', type=str,
-                            help='Unique supplement to index name that allows to distinguish it from other indexes names')
-    arg_parser.add_argument('-T', '--trg-dir-path', required=True, metavar='str', dest='trg_dir_path', type=str,
-                            help='Path to directory for results')
-    arg_parser.add_argument('-b', '--bench-file-path', metavar='None', dest='bench_file_path', type=str,
-                            help='Path for index creation performance measurement results file')
-    return arg_parser.parse_args()
-```
-### your_tool.py
-```
+# autopep8: off
+import sys; sys.dont_write_bytecode = True
+# autopep8: on
 import json
 import os
-from your_tool_cli import add_args
+from argparse import ArgumentParser
+from datetime import datetime
 from antidb import Idx, Prs, count_exec_time
 
-# Getting from CLI path to
-# DB-file, path to directory
-# for target files, and prefix
-# that makes index names unique.
-args = add_args()
+arg_parser = ArgumentParser()
+arg_parser.add_argument('-S', '--ann-file-path', required=True, metavar='str', dest='ann_file_path', type=str,
+                        help='Path to table with rsIDs column (uncompressed)')
+arg_parser.add_argument('-D', '--dbsnp-file-path', required=True, metavar='str', dest='dbsnp_file_path', type=str,
+                        help='Path to official dbSNP VCF (uncompressed or compressed via Seekable zstd)')
+arg_parser.add_argument('-R', '--rsmerged-file-path', required=True, metavar='str', dest='rsmerged_file_path', type=str,
+                        help='Path to official refsnp-merged JSON (uncompressed or compressed via Seekable zstd)')
+arg_parser.add_argument('-T', '--trg-dir-path', required=True, metavar='str', dest='trg_dir_path', type=str,
+                        help='Path to directory for results')
+arg_parser.add_argument('-c', '--rsids-col-num', metavar='1', default=1, dest='rsids_col_num', type=int,
+                        help='rsIDs-column number in source table')
+args = arg_parser.parse_args()
 
-# Initialization of a
-# class containing methods,
-# whose sequential call can
-# prepare DB-file indexes.
-idx = Idx(args.db_file_path,
-          args.idx_prefix)
+dbsnp_idx = Idx(args.dbsnp_file_path,
+                'rsids__gnomad_cln')
 
 
-@idx.idx
+@dbsnp_idx.idx
+def parse_dbsnp_line(dbsnp_zst_line):
+    if 'GnomAD' in dbsnp_zst_line \
+            and 'CLN' in dbsnp_zst_line:
+        return dbsnp_zst_line.split('\t')[2]
+    return None
+
+
+rsmerged_idx = Idx(args.rsmerged_file_path,
+                   'rsids')
+
+
+@rsmerged_idx.idx
 def parse_rsmerged_line(rsmerged_zst_line):
-    '''
-    An exemplary algorithm that pulls indexable rsIDs from each line
-    of the refsnp-merged.json table. This table can be downloaded from
-    https://ftp.ncbi.nih.gov/snp/latest_release/JSON/refsnp-merged.json.bz2.
-    Don't forget to decompress it: bzip2 -d /path/to/refsnp-merged.json.bz2.
-    Any other function can be in place of this one. Your function can
-    return None or another empty value if nothing is found in the line.
-    '''
     rsmerged_zst_obj = json.loads(rsmerged_zst_line)
-    rs_ids = [rsmerged_zst_obj['refsnp_id']] + \
+    rsids = [rsmerged_zst_obj['refsnp_id']] + \
         rsmerged_zst_obj['merged_snapshot_data']['merged_into']
-    return rs_ids
+    return rsids
 
 
-# Compressing DB-file and
-# creating two indexes. If
-# either of these files already
-# exists, the corresponding
-# step is skipped. Full-index
-# contains DB-file lines elements
-# found by the decorated function
-# and start positions of these
-# lines. Mem-index contains every
-# N-th element previously indexed
-# and the start position of the
-# corresponding full-index line.
-# Full-index is usually very
-# big, while mem-index does
-# not overload RAM at all.
+parse_dbsnp_line()
 parse_rsmerged_line()
 
-# Optional. Writing into separate file the results
-# of index creation performance measurement.
-if args.bench_file_path and not os.path.exists(args.bench_file_path):
-    with open(args.bench_file_path, 'w') as bench_file_opened:
-        for func_name, exec_time in idx.bench:
-            bench_file_opened.write(f'{func_name}\t{exec_time}\n')
+perf = dbsnp_idx.perf + rsmerged_idx.perf
 
-# Initialization of the class
-# containing the parser method.
-prs = Prs(args.db_file_path,
-          args.idx_prefix)
+dbsnp_prs = Prs(args.dbsnp_file_path,
+                'rsids__gnomad_cln')
+rsmerged_prs = Prs(args.rsmerged_file_path,
+                   'rsids')
 
 
 @count_exec_time
-def your_prs_task(args, prs):
-    '''
-    Instant search for your values in the indexed DB file.
-    There are two search strategies: 1. you create an array
-    of values and pass it to the parser; 2. you create
-    the parser multiple times, passing to it a single
-    value each time. Values can be of any type: the
-    parser itself converts them to str. The object
-    of prs.prs is a generator that one by one
-    returns DB-file lines with found values.
-    '''
-    trg_file1_path = os.path.join(args.trg_dir_path,
-                                  'out_1.txt')
-    with open(trg_file1_path, 'w') as trg_file1_opened:
-        for db_zst_found_line in prs.prs(['332',
-                                          '1192046386']):
-            trg_file1_opened.write(db_zst_found_line)
-    trg_file2_path = os.path.join(args.trg_dir_path,
-                                  'out_2.txt')
-    with open(trg_file2_path, 'w') as trg_file2_opened:
-        for rs_id in [332, 1192046386]:
-            for db_zst_found_line in prs.prs(rs_id):
-                trg_file2_opened.write(db_zst_found_line)
+def ann(args, res_files_crt_time, dbsnp_prs, rsmerged_prs):
+    trg_file_path = os.path.join(args.trg_dir_path,
+                                 f'ann_res_{res_files_crt_time}.txt')
+    dump_file_path = os.path.join(args.trg_dir_path,
+                                  f'ann_dump_{res_files_crt_time}.txt')
+    with open(args.ann_file_path) as ann_file_opened:
+        with open(trg_file_path, 'w') as trg_file_opened:
+            with open(dump_file_path, 'w') as dump_file_opened:
+                for ann_file_line in ann_file_opened:
+                    if ann_file_line.startswith('#'):
+                        continue
+                    empty_res = True
+                    ann_file_line = ann_file_line.rstrip()
+                    ann_rsid = ann_file_line.split('\t')[args.rsids_col_num - 1]
+                    for dbsnp_zst_line in dbsnp_prs.prs(ann_rsid):
+                        empty_res = False
+                        trg_file_opened.write(ann_file_line +
+                                              dbsnp_zst_line)
+                    if empty_res:
+                        for rsmerged_zst_line in rsmerged_prs.prs(ann_rsid):
+                            ann_rsid_syns = parse_rsmerged_line.__wrapped__(rsmerged_zst_line)
+                            for dbsnp_zst_line in dbsnp_prs.prs(ann_rsid_syns):
+                                empty_res = False
+                                trg_file_opened.write(ann_file_line +
+                                                      dbsnp_zst_line)
+                            if not empty_res:
+                                break
+                        else:
+                            dump_file_opened.write(ann_file_line + '\n')
 
 
-# Enjoy the amazing search speed:).
-func_name, exec_time = your_prs_task(args, prs)
-if args.bench_file_path:
-    with open(args.bench_file_path, 'a') as bench_file_opened:
-        bench_file_opened.write(f'{func_name}\t{exec_time}\n')
+res_files_crt_time = datetime.now()
+perf.append(ann(args,
+                res_files_crt_time,
+                dbsnp_prs,
+                rsmerged_prs))
 
-'''
-bench.txt:
-
-crt_db_zst	0:02:55.958405
-crt_full_idx_tmp_srtd	0:00:31.891816
-crt_full_idx	0:00:17.979250
-crt_mem_idx	0:00:08.692710
-your_prs_task	0:00:00.102855
-'''
+perf_file_path = os.path.join(args.trg_dir_path,
+                              f'ann_perf_{res_files_crt_time}.txt')
+with open(perf_file_path, 'w') as perf_file_opened:
+    for func_name, exec_time in perf:
+        perf_file_opened.write(f'{func_name}\t{exec_time}\n')
 ```
