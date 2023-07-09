@@ -11,7 +11,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v1.3.1'
+__version__ = 'v1.3.2'
 __authors__ = ['Platon Bykadorov (platon.work@gmail.com), 2023']
 
 
@@ -65,7 +65,7 @@ class Idx():
                 os.remove(self.db_file_path)
             if not os.path.exists(self.full_idx_tmp_path) \
                     and not os.path.exists(self.full_idx_path):
-                self.crt_full_idx_tmp(your_line_parser)
+                self.perf.append(self.crt_full_idx_tmp(your_line_parser))
             if not os.path.exists(self.full_idx_tmp_srtd_path) \
                     and not os.path.exists(self.full_idx_path):
                 self.perf.append(self.crt_full_idx_tmp_srtd())
