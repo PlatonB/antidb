@@ -150,3 +150,58 @@ perf_file_path = os.path.join(args.trg_dir_path,
 with open(perf_file_path, 'w') as perf_file_opened:
     json.dump(perf, perf_file_opened, indent=4)
 ```
+
+#### Performance measurement results
+##### ann_perf_2023-07-09 20:45:36.102376.json
+- `dbsnp_idx` - indexing `GnomAD`- and `CLN`-containing strings of dbSNP VCF;
+- `rsmerged_idx` - indexing all lines of rsmerged JSON;
+- `ann` - querying 2842 rsIDs by dbSNP VCF and rsmerged JSON.
+```
+{
+    "dbsnp_idx": [
+        [
+            "crt_db_zst",
+            "0:39:02.127938"
+        ],
+        [
+            "crt_full_idx_tmp",
+            "1:06:13.698458"
+        ],
+        [
+            "crt_full_idx_tmp_srtd",
+            "0:00:00.928633"
+        ],
+        [
+            "crt_full_idx",
+            "0:00:00.577710"
+        ],
+        [
+            "crt_mem_idx",
+            "0:00:00.280014"
+        ]
+    ],
+    "rsmerged_idx": [
+        [
+            "crt_db_zst",
+            "0:02:44.068920"
+        ],
+        [
+            "crt_full_idx_tmp",
+            "0:04:43.153807"
+        ],
+        [
+            "crt_full_idx_tmp_srtd",
+            "0:00:30.015826"
+        ],
+        [
+            "crt_full_idx",
+            "0:00:17.204649"
+        ],
+        [
+            "crt_mem_idx",
+            "0:00:08.811190"
+        ]
+    ],
+    "ann": "0:00:06.995505"
+}
+```
