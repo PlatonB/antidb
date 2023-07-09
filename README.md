@@ -53,7 +53,9 @@ import json
 import os
 from argparse import ArgumentParser
 from datetime import datetime
-from antidb import Idx, Prs, count_exec_time
+from antidb import (Idx,
+                    Prs,
+                    count_exec_time)
 
 arg_parser = ArgumentParser()
 arg_parser.add_argument('-S', '--ann-file-path', required=True, metavar='str', dest='ann_file_path', type=str,
@@ -95,7 +97,8 @@ def parse_rsmerged_line(rsmerged_zst_line):
 parse_dbsnp_line()
 parse_rsmerged_line()
 
-perf = dbsnp_idx.perf + rsmerged_idx.perf
+perf = {'dbsnp_idx': dbsnp_idx.perf,
+        'rsmerged_idx': rsmerged_idx.perf}
 
 dbsnp_prs = Prs(args.dbsnp_file_path,
                 'rsids__gnomad_cln')
@@ -136,14 +139,14 @@ def ann(args, res_files_crt_time, dbsnp_prs, rsmerged_prs):
 
 
 res_files_crt_time = datetime.now()
-perf.append(ann(args,
-                res_files_crt_time,
-                dbsnp_prs,
-                rsmerged_prs))
+
+perf['ann'] = ann(args,
+                  res_files_crt_time,
+                  dbsnp_prs,
+                  rsmerged_prs)[1]
 
 perf_file_path = os.path.join(args.trg_dir_path,
-                              f'ann_perf_{res_files_crt_time}.txt')
+                              f'ann_perf_{res_files_crt_time}.json')
 with open(perf_file_path, 'w') as perf_file_opened:
-    for func_name, exec_time in perf:
-        perf_file_opened.write(f'{func_name}\t{exec_time}\n')
+    json.dump(perf, perf_file_opened, indent=4)
 ```
