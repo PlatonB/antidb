@@ -1,30 +1,36 @@
 # antidb
 ## Quick start
 ```
-from antidb import Idx, Prs
+from pprint import pprint
+from antidb import Idx, Prs, count_exec_time
 
 dbsnp_vcf_path = '/mnt/Storage/databases/dbSNP_platon/GCF_000001405.40.vcf'
-idx_prefix = 'allrsids'
+dbsnp_idx_prefix = 'all_rsids'
 
-idx = Idx(dbsnp_vcf_path,
-          idx_prefix)
+dbsnp_idx = Idx(dbsnp_vcf_path,
+                dbsnp_idx_prefix)
 
 
-@idx.idx
-def get_id(dbsnp_zst_line):
+@dbsnp_idx.idx
+def get_rsid(dbsnp_zst_line):
     return dbsnp_zst_line.split('\t')[2]
 
 
-get_id()
+get_rsid()
 
-prs = Prs(dbsnp_vcf_path,
-          idx_prefix)
+dbsnp_prs = Prs(dbsnp_vcf_path,
+                dbsnp_idx_prefix)
 
-for rs_id in ['rs1009150',
-              'rs12044852',
-              'rs4902496']:
-    for dbsnp_zst_line in prs.prs(rs_id):
+
+@count_exec_time
+def search_rsid_lines(dbsnp_prs):
+    for dbsnp_zst_line in dbsnp_prs.prs(['rs1009150',
+                                         'rs12044852',
+                                         'rs4902496']):
         print(dbsnp_zst_line)
+
+
+pprint(search_rsid_lines(dbsnp_prs))
 ```
 
 ## App example
