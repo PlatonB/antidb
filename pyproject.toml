@@ -1,0 +1,40 @@
+[build-system]
+requires = ["flit_core>=3.9.0"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "antidb"
+version = "2023.7.11"
+authors = [
+    { name="Platon Bykadorov", email="platon.work@gmail.com" },
+]
+description = "The simplest index-and-search engine for huge multiline text files. Focused primarily on bioinformatics. Inspired by tabix, but isn't its replacement. Written in Python. Works on top of Zstandard Seekable & pyzstd SeekableZstdFile."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: POSIX :: Linux",
+]
+keywords = [
+    "python",
+    "search-engine",
+    "parser",
+    "performance",
+    "bioinformatics",
+    "big-data",
+    "dbms",
+    "indexer",
+    "zstd",
+    "zstandard",
+    "vigg",
+    "seekable",
+    "pyzstd",
+]
+dependencies = [
+    "pyzstd >=0.15.9",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/PlatonB/antidb"
+"Bug Tracker" = "https://github.com/PlatonB/antidb/issues"

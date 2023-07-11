@@ -12,8 +12,10 @@ sys.path.append(par_dir_path.joinpath('src/antidb').as_posix())
 from antidb import (Idx, Prs)
 # autopep8: on
 
-__version__ = 'v1.0.0'
-__authors__ = ['Platon Bykadorov (platon.work@gmail.com), 2023']
+__version__ = 'v1.0.1'
+__authors__ = [{'name': 'Platon Bykadorov',
+                'email': 'platon.work@gmail.com',
+                'years': '2023'}]
 
 
 def remove_old_files(idx_obj):
