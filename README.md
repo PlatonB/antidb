@@ -1,6 +1,9 @@
 # antidb
 ## Quick start
 ```
+pip3 install antidb
+```
+```
 from antidb import (Idx,
                     Prs,
                     count_exec_time)
