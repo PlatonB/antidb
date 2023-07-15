@@ -128,6 +128,7 @@ def ann(args, res_files_crt_time, dbsnp_prs, rsmerged_prs):
                         empty_res = False
                         trg_file_opened.write(ann_file_line +
                                               dbsnp_zst_line)
+                        break
                     if empty_res:
                         for rsmerged_zst_line in rsmerged_prs.prs(ann_rsid):
                             ann_rsid_syns = parse_rsmerged_line.__wrapped__(rsmerged_zst_line)
@@ -135,6 +136,7 @@ def ann(args, res_files_crt_time, dbsnp_prs, rsmerged_prs):
                                 empty_res = False
                                 trg_file_opened.write(ann_file_line +
                                                       dbsnp_zst_line)
+                                break
                             if not empty_res:
                                 break
                         else:
