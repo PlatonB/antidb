@@ -11,16 +11,16 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v1.3.3'
+__version__ = 'v1.3.4'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
 
 
 def count_exec_time(any_func):
-    def wrapper(*args):
+    def wrapper(*args, **kwargs):
         exec_time_start = datetime.now()
-        any_func(*args)
+        any_func(*args, **kwargs)
         return (any_func.__name__,
                 str(datetime.now() -
                     exec_time_start))
