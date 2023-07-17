@@ -5,6 +5,7 @@ import os
 import json
 from pathlib import PurePath
 from decimal import Decimal
+from random import shuffle
 import pyzstd
 sys.dont_write_bytecode = True
 par_dir_path = PurePath(__file__).parent.parent
@@ -13,7 +14,7 @@ from antidb import (Idx,
                     Prs)
 # autopep8: on
 
-__version__ = 'v1.1.0'
+__version__ = 'v1.2.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -89,7 +90,11 @@ class RefsnpChrmtJsonTest(unittest.TestCase):
                       wget -q -O - {self.mt_jsonbz2_url} |
                       bzip2 -d > {self.mt_json_path}''')
         mt_idx = Idx(self.mt_json_path,
-                     'rsids')
+                     'rsids',
+                     compr_frame_size=1024,
+                     compr_chunk_size=1024,
+                     compr_chunk_elems_quan=10,
+                     unidx_lines_quan=10)
         remove_old_files(mt_idx)
 
         @mt_idx.idx
@@ -107,6 +112,20 @@ class RefsnpChrmtJsonTest(unittest.TestCase):
                       for mt_zst_line in mt_prs.prs(mt_zst_rsids)]
         self.assertEqual(mt_zst_rsids,
                          mt_prs_res)
+        mt_zst_rsids_mxd = mt_zst_rsids[:]
+        shuffle(mt_zst_rsids_mxd)
+        mt_prs_res_mxd = [parse_mt_line.__wrapped__(mt_zst_line)
+                          for mt_zst_line in mt_prs.prs(mt_zst_rsids_mxd)]
+        self.assertNotEqual(mt_zst_rsids_mxd,
+                            mt_zst_rsids)
+        self.assertNotEqual(mt_prs_res_mxd,
+                            mt_prs_res)
+        self.assertEqual(len(mt_zst_rsids_mxd),
+                         len(mt_zst_rsids))
+        self.assertEqual(len(mt_prs_res_mxd),
+                         len(mt_prs_res))
+        self.assertEqual(len(mt_prs_res_mxd),
+                         len(mt_zst_rsids))
         remove_new_files(mt_idx)
 
     def test_mt_clinical(self):
