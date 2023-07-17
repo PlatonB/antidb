@@ -9,10 +9,11 @@ import pyzstd
 sys.dont_write_bytecode = True
 par_dir_path = PurePath(__file__).parent.parent
 sys.path.append(par_dir_path.joinpath('src/antidb').as_posix())
-from antidb import (Idx, Prs)
+from antidb import (Idx,
+                    Prs)
 # autopep8: on
 
-__version__ = 'v1.0.1'
+__version__ = 'v1.1.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -80,6 +81,32 @@ class RefsnpChrmtJsonTest(unittest.TestCase):
                          ['2124599696',
                           '8936',
                           '368463610'])
+        remove_new_files(mt_idx)
+
+    def test_mt_by_mt(self):
+        if not os.path.exists(self.mt_json_path):
+            os.system(f'''
+                      wget -q -O - {self.mt_jsonbz2_url} |
+                      bzip2 -d > {self.mt_json_path}''')
+        mt_idx = Idx(self.mt_json_path,
+                     'rsids')
+        remove_old_files(mt_idx)
+
+        @mt_idx.idx
+        def parse_mt_line(mt_zst_line):
+            return json.loads(mt_zst_line)['refsnp_id']
+
+        parse_mt_line()
+        mt_prs = Prs(self.mt_json_path,
+                     'rsids')
+        with pyzstd.open(mt_prs.db_zst_path,
+                         mode='rt') as mt_zst_opened:
+            mt_zst_rsids = [json.loads(mt_zst_line)['refsnp_id']
+                            for mt_zst_line in mt_zst_opened]
+        mt_prs_res = [parse_mt_line.__wrapped__(mt_zst_line)
+                      for mt_zst_line in mt_prs.prs(mt_zst_rsids)]
+        self.assertEqual(mt_zst_rsids,
+                         mt_prs_res)
         remove_new_files(mt_idx)
 
     def test_mt_clinical(self):
