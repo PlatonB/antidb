@@ -11,7 +11,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v1.3.4'
+__version__ = 'v1.4.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -150,6 +150,7 @@ class Idx():
             with TextIOWrapper(ZstdFile(self.mem_idx_path,
                                         mode='w',
                                         level_or_option=self.compr_settings)) as mem_idx_opened:
+                mem_idx_opened.write(f'unidx_lines_quan={self.unidx_lines_quan}\n')
                 while True:
                     full_idx_lstart = full_idx_opened.tell()
                     full_idx_line = full_idx_opened.readline()
@@ -180,15 +181,16 @@ class Prs(Idx):
         else:
             self.mem_idx_opened = TextIOWrapper(ZstdFile(self.mem_idx_path,
                                                          mode='r'))
-        self.mem_idx_your_vals, self.full_idx_lstarts = self.read_mem_idx()
+        self.unidx_lines_quan, self.mem_idx_your_vals, self.full_idx_lstarts = self.read_mem_idx()
 
     def read_mem_idx(self):
+        unidx_lines_quan = int(self.mem_idx_opened.readline().rstrip().split('=')[1])
         mem_idx_your_vals, full_idx_lstarts = [], []
         for mem_idx_line in self.mem_idx_opened:
             mem_idx_row = mem_idx_line.rstrip().split(',')
             mem_idx_your_vals.append(mem_idx_row[0])
             full_idx_lstarts.append(int(mem_idx_row[1]))
-        return mem_idx_your_vals, full_idx_lstarts
+        return unidx_lines_quan, mem_idx_your_vals, full_idx_lstarts
 
     def prs(self, your_vals):
         if type(your_vals) in [str,

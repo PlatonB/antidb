@@ -14,7 +14,7 @@ from antidb import (Idx,
                     Prs)
 # autopep8: on
 
-__version__ = 'v1.2.0'
+__version__ = 'v1.2.1'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -69,7 +69,7 @@ class RefsnpChrmtJsonTest(unittest.TestCase):
             mem_idx_lines_cnt = 0
             for mem_idx_line in mem_idx_opened:
                 mem_idx_lines_cnt += 1
-            self.assertEqual(mem_idx_lines_cnt, 8)
+            self.assertEqual(mem_idx_lines_cnt, 9)
         mt_prs = Prs(self.mt_json_path,
                      'rsids')
         mt_prs_res = []
@@ -102,6 +102,10 @@ class RefsnpChrmtJsonTest(unittest.TestCase):
             return json.loads(mt_zst_line)['refsnp_id']
 
         parse_mt_line()
+        with pyzstd.open(mt_idx.mem_idx_path,
+                         mode='rt') as mem_idx_opened:
+            unidx_lines_quan = int(mem_idx_opened.readline().rstrip().split('=')[1])
+            self.assertEqual(unidx_lines_quan, 10)
         mt_prs = Prs(self.mt_json_path,
                      'rsids')
         with pyzstd.open(mt_prs.db_zst_path,
@@ -156,7 +160,7 @@ class RefsnpChrmtJsonTest(unittest.TestCase):
             mem_idx_lines_cnt = 0
             for mem_idx_line in mem_idx_opened:
                 mem_idx_lines_cnt += 1
-            self.assertEqual(mem_idx_lines_cnt, 1)
+            self.assertEqual(mem_idx_lines_cnt, 2)
         mt_cln_prs = Prs(self.mt_json_path,
                          'rsids_cln')
         mt_cln_prs_res = []
