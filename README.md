@@ -92,8 +92,9 @@ rsmerged_idx = Idx(args.rsmerged_file_path,
 @rsmerged_idx.idx
 def parse_rsmerged_line(rsmerged_zst_line):
     rsmerged_zst_obj = json.loads(rsmerged_zst_line)
-    rsids = [rsmerged_zst_obj['refsnp_id']] + \
-        rsmerged_zst_obj['merged_snapshot_data']['merged_into']
+    rsids = list(map(lambda rsid: f'rs{rsid}',
+                     ([rsmerged_zst_obj['refsnp_id']] +
+                      rsmerged_zst_obj['merged_snapshot_data']['merged_into'])))
     return rsids
 
 
