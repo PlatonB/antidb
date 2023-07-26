@@ -14,7 +14,7 @@ from antidb import (Idx,
                     Prs)
 # autopep8: on
 
-__version__ = 'v1.2.1'
+__version__ = 'v1.2.2'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -52,12 +52,8 @@ class RefsnpChrmtJsonTest(unittest.TestCase):
         mt_idx = Idx(self.mt_json_path,
                      'rsids')
         remove_old_files(mt_idx)
-
-        @mt_idx.idx
-        def parse_mt_line(mt_zst_line):
-            return json.loads(mt_zst_line)['refsnp_id']
-
-        parse_mt_line()
+        mt_idx.idx(lambda mt_zst_line:
+                   json.loads(mt_zst_line)['refsnp_id'])()
         with pyzstd.open(mt_idx.full_idx_path,
                          mode='rt') as full_idx_opened:
             full_idx_lines_cnt = 0
