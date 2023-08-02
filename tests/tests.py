@@ -14,7 +14,7 @@ from antidb import (Idx,
                     Prs)
 # autopep8: on
 
-__version__ = 'v1.2.2'
+__version__ = 'v1.3.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -43,12 +43,18 @@ class RefsnpChrmtJsonTest(unittest.TestCase):
     mt_jsonbz2_url = 'https://ftp.ncbi.nih.gov/snp/archive/b156/JSON/refsnp-chrMT.json.bz2'
     mt_json_path = PurePath(PurePath(__file__).parent,
                             PurePath(mt_jsonbz2_url).name[:-4]).as_posix()
+    if not os.path.exists(mt_json_path):
+        os.system(f'''
+                  wget -q -O - {mt_jsonbz2_url} |
+                  bzip2 -d > {mt_json_path}''')
+    with open(mt_json_path) as mt_json_opened:
+        mt_json_content = mt_json_opened.read()
+    os.remove(mt_json_path)
 
     def test_mt(self):
         if not os.path.exists(self.mt_json_path):
-            os.system(f'''
-                      wget -q -O - {self.mt_jsonbz2_url} |
-                      bzip2 -d > {self.mt_json_path}''')
+            with open(self.mt_json_path, 'w') as mt_json_opened:
+                mt_json_opened.write(self.mt_json_content)
         mt_idx = Idx(self.mt_json_path,
                      'rsids')
         remove_old_files(mt_idx)
@@ -82,9 +88,8 @@ class RefsnpChrmtJsonTest(unittest.TestCase):
 
     def test_mt_by_mt(self):
         if not os.path.exists(self.mt_json_path):
-            os.system(f'''
-                      wget -q -O - {self.mt_jsonbz2_url} |
-                      bzip2 -d > {self.mt_json_path}''')
+            with open(self.mt_json_path, 'w') as mt_json_opened:
+                mt_json_opened.write(self.mt_json_content)
         mt_idx = Idx(self.mt_json_path,
                      'rsids',
                      compr_frame_size=1024,
@@ -130,9 +135,8 @@ class RefsnpChrmtJsonTest(unittest.TestCase):
 
     def test_mt_clinical(self):
         if not os.path.exists(self.mt_json_path):
-            os.system(f'''
-                      wget -q -O - {self.mt_jsonbz2_url} |
-                      bzip2 -d > {self.mt_json_path}''')
+            with open(self.mt_json_path, 'w') as mt_json_opened:
+                mt_json_opened.write(self.mt_json_content)
         mt_cln_idx = Idx(self.mt_json_path,
                          'rsids_cln')
         remove_old_files(mt_cln_idx)
