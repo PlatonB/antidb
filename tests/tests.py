@@ -14,7 +14,7 @@ from antidb import (Idx,
                     Prs)
 # autopep8: on
 
-__version__ = 'v1.3.0'
+__version__ = 'v1.4.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -59,7 +59,7 @@ class RefsnpChrmtJsonTest(unittest.TestCase):
                      'rsids')
         remove_old_files(mt_idx)
         mt_idx.idx(lambda mt_zst_line:
-                   json.loads(mt_zst_line)['refsnp_id'])()
+                   json.loads(mt_zst_line)['refsnp_id'])
         with pyzstd.open(mt_idx.full_idx_path,
                          mode='rt') as full_idx_opened:
             full_idx_lines_cnt = 0
@@ -98,11 +98,10 @@ class RefsnpChrmtJsonTest(unittest.TestCase):
                      unidx_lines_quan=10)
         remove_old_files(mt_idx)
 
-        @mt_idx.idx
         def parse_mt_line(mt_zst_line):
             return json.loads(mt_zst_line)['refsnp_id']
 
-        parse_mt_line()
+        mt_idx.idx(parse_mt_line)
         with pyzstd.open(mt_idx.mem_idx_path,
                          mode='rt') as mem_idx_opened:
             unidx_lines_quan = int(mem_idx_opened.readline().rstrip().split('=')[1])
@@ -113,13 +112,13 @@ class RefsnpChrmtJsonTest(unittest.TestCase):
                          mode='rt') as mt_zst_opened:
             mt_zst_rsids = [json.loads(mt_zst_line)['refsnp_id']
                             for mt_zst_line in mt_zst_opened]
-        mt_prs_res = [parse_mt_line.__wrapped__(mt_zst_line)
+        mt_prs_res = [parse_mt_line(mt_zst_line)
                       for mt_zst_line in mt_prs.prs(mt_zst_rsids)]
         self.assertEqual(mt_zst_rsids,
                          mt_prs_res)
         mt_zst_rsids_mxd = mt_zst_rsids[:]
         shuffle(mt_zst_rsids_mxd)
-        mt_prs_res_mxd = [parse_mt_line.__wrapped__(mt_zst_line)
+        mt_prs_res_mxd = [parse_mt_line(mt_zst_line)
                           for mt_zst_line in mt_prs.prs(mt_zst_rsids_mxd)]
         self.assertNotEqual(mt_zst_rsids_mxd,
                             mt_zst_rsids)
@@ -141,14 +140,13 @@ class RefsnpChrmtJsonTest(unittest.TestCase):
                          'rsids_cln')
         remove_old_files(mt_cln_idx)
 
-        @mt_cln_idx.idx
         def parse_mt_cln_line(mt_zst_line):
             mt_zst_obj = json.loads(mt_zst_line)
             if len(mt_zst_obj['primary_snapshot_data']['allele_annotations'][0]['clinical']) > 0:
                 return mt_zst_obj['refsnp_id']
             return None
 
-        parse_mt_cln_line()
+        mt_cln_idx.idx(parse_mt_cln_line)
         with pyzstd.open(mt_cln_idx.full_idx_path,
                          mode='rt') as full_idx_opened:
             full_idx_lines_cnt = 0

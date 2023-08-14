@@ -8,19 +8,14 @@ from antidb import (Idx,
                     Prs,
                     count_exec_time)
 
-dbsnp_vcf_path = '/mnt/Storage/databases/dbSNP_platon/GCF_000001405.40.vcf'
+dbsnp_vcf_path = '/path/to/GCF_000001405.40.zst'
 dbsnp_idx_prefix = 'all_rsids'
 
 dbsnp_idx = Idx(dbsnp_vcf_path,
                 dbsnp_idx_prefix)
 
-
-@dbsnp_idx.idx
-def get_rsid(dbsnp_zst_line):
-    return dbsnp_zst_line.split('\t')[2]
-
-
-get_rsid()
+dbsnp_idx.idx(lambda dbsnp_zst_line:
+              dbsnp_zst_line.split('\t')[2])
 
 dbsnp_prs = Prs(dbsnp_vcf_path,
                 dbsnp_idx_prefix)
@@ -60,6 +55,22 @@ from antidb import (Idx,
                     Prs,
                     count_exec_time)
 
+
+def parse_dbsnp_line(dbsnp_zst_line):
+    if 'GnomAD' in dbsnp_zst_line \
+            and 'CLN' in dbsnp_zst_line:
+        return dbsnp_zst_line.split('\t')[2]
+    return None
+
+
+def parse_rsmerged_line(rsmerged_zst_line):
+    rsmerged_zst_obj = json.loads(rsmerged_zst_line)
+    rsids = list(map(lambda rsid: f'rs{rsid}',
+                     ([rsmerged_zst_obj['refsnp_id']] +
+                      rsmerged_zst_obj['merged_snapshot_data']['merged_into'])))
+    return rsids
+
+
 arg_parser = ArgumentParser()
 arg_parser.add_argument('-S', '--ann-file-path', required=True, metavar='str', dest='ann_file_path', type=str,
                         help='Path to table with rsIDs column (uncompressed)')
@@ -75,35 +86,12 @@ args = arg_parser.parse_args()
 
 dbsnp_idx = Idx(args.dbsnp_file_path,
                 'rsids__gnomad_cln')
-
-
-@dbsnp_idx.idx
-def parse_dbsnp_line(dbsnp_zst_line):
-    if 'GnomAD' in dbsnp_zst_line \
-            and 'CLN' in dbsnp_zst_line:
-        return dbsnp_zst_line.split('\t')[2]
-    return None
-
-
+dbsnp_idx.idx(parse_dbsnp_line)
 rsmerged_idx = Idx(args.rsmerged_file_path,
                    'rsids')
-
-
-@rsmerged_idx.idx
-def parse_rsmerged_line(rsmerged_zst_line):
-    rsmerged_zst_obj = json.loads(rsmerged_zst_line)
-    rsids = list(map(lambda rsid: f'rs{rsid}',
-                     ([rsmerged_zst_obj['refsnp_id']] +
-                      rsmerged_zst_obj['merged_snapshot_data']['merged_into'])))
-    return rsids
-
-
-parse_dbsnp_line()
-parse_rsmerged_line()
-
+rsmerged_idx.idx(parse_rsmerged_line)
 perf = {'dbsnp_idx': dbsnp_idx.perf,
         'rsmerged_idx': rsmerged_idx.perf}
-
 dbsnp_prs = Prs(args.dbsnp_file_path,
                 'rsids__gnomad_cln')
 rsmerged_prs = Prs(args.rsmerged_file_path,
@@ -132,7 +120,7 @@ def ann(args, res_files_crt_time, dbsnp_prs, rsmerged_prs):
                         break
                     if empty_res:
                         for rsmerged_zst_line in rsmerged_prs.prs(ann_rsid):
-                            ann_rsid_syns = parse_rsmerged_line.__wrapped__(rsmerged_zst_line)
+                            ann_rsid_syns = parse_rsmerged_line(rsmerged_zst_line)
                             for dbsnp_zst_line in dbsnp_prs.prs(ann_rsid_syns):
                                 empty_res = False
                                 trg_file_opened.write(ann_file_line +

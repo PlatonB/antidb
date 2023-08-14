@@ -4,14 +4,13 @@ import sys; sys.dont_write_bytecode = True
 import os
 from datetime import datetime
 from io import TextIOWrapper
-from functools import wraps
 from decimal import Decimal
 from bisect import bisect
 from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v1.4.0'
+__version__ = 'v1.5.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -60,24 +59,21 @@ class Idx():
         self.perf = []
 
     def idx(self, your_line_parser):
-        @wraps(your_line_parser)
-        def mng():
-            if not os.path.exists(self.db_zst_path):
-                self.perf.append(self.crt_db_zst())
-                os.remove(self.db_file_path)
-            if not os.path.exists(self.full_idx_tmp_path) \
-                    and not os.path.exists(self.full_idx_path):
-                self.perf.append(self.crt_full_idx_tmp(your_line_parser))
-            if not os.path.exists(self.full_idx_tmp_srtd_path) \
-                    and not os.path.exists(self.full_idx_path):
-                self.perf.append(self.crt_full_idx_tmp_srtd())
-                os.remove(self.full_idx_tmp_path)
-            if not os.path.exists(self.full_idx_path):
-                self.perf.append(self.crt_full_idx())
-                os.remove(self.full_idx_tmp_srtd_path)
-            if not os.path.exists(self.mem_idx_path):
-                self.perf.append(self.crt_mem_idx())
-        return mng
+        if not os.path.exists(self.db_zst_path):
+            self.perf.append(self.crt_db_zst())
+            os.remove(self.db_file_path)
+        if not os.path.exists(self.full_idx_tmp_path) \
+                and not os.path.exists(self.full_idx_path):
+            self.perf.append(self.crt_full_idx_tmp(your_line_parser))
+        if not os.path.exists(self.full_idx_tmp_srtd_path) \
+                and not os.path.exists(self.full_idx_path):
+            self.perf.append(self.crt_full_idx_tmp_srtd())
+            os.remove(self.full_idx_tmp_path)
+        if not os.path.exists(self.full_idx_path):
+            self.perf.append(self.crt_full_idx())
+            os.remove(self.full_idx_tmp_srtd_path)
+        if not os.path.exists(self.mem_idx_path):
+            self.perf.append(self.crt_mem_idx())
 
     @count_exec_time
     def crt_db_zst(self):
