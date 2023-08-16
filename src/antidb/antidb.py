@@ -10,7 +10,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v1.5.0'
+__version__ = 'v1.6.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -124,7 +124,7 @@ class Idx():
 
     @count_exec_time
     def crt_full_idx_tmp_srtd(self):
-        os.system(f"sort -t ',' {self.full_idx_tmp_path} > {self.full_idx_tmp_srtd_path}")
+        os.system(f"LC_ALL=C sort -t ',' -k1,1 {self.full_idx_tmp_path} > {self.full_idx_tmp_srtd_path}")
 
     @count_exec_time
     def crt_full_idx(self):
