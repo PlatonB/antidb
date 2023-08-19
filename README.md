@@ -71,6 +71,17 @@ def parse_rsmerged_line(rsmerged_zst_line):
     return rsids
 
 
+def rsid_to_coords(rsid, dbsnp_prs,
+                   rsmerged_prs, parse_rsmerged_line):
+    for dbsnp_zst_line in dbsnp_prs.prs(rsid):
+        return dbsnp_zst_line
+    for rsmerged_zst_line in rsmerged_prs.prs(rsid):
+        rsid_syns = parse_rsmerged_line(rsmerged_zst_line)
+        for dbsnp_zst_line in dbsnp_prs.prs(rsid_syns):
+            return dbsnp_zst_line
+    return None
+
+
 arg_parser = ArgumentParser()
 arg_parser.add_argument('-S', '--ann-file-path', required=True, metavar='str', dest='ann_file_path', type=str,
                         help='Path to table with rsIDs column (uncompressed)')
@@ -99,7 +110,7 @@ rsmerged_prs = Prs(args.rsmerged_file_path,
 
 
 @count_exec_time
-def ann(args, res_files_crt_time, dbsnp_prs, rsmerged_prs):
+def ann(args, res_files_crt_time, dbsnp_prs, rsmerged_prs, parse_rsmerged_line):
     trg_file_path = os.path.join(args.trg_dir_path,
                                  f'ann_res_{res_files_crt_time}.txt')
     dump_file_path = os.path.join(args.trg_dir_path,
@@ -110,26 +121,17 @@ def ann(args, res_files_crt_time, dbsnp_prs, rsmerged_prs):
                 for ann_file_line in ann_file_opened:
                     if ann_file_line.startswith('#'):
                         continue
-                    empty_res = True
                     ann_file_line = ann_file_line.rstrip()
                     ann_rsid = ann_file_line.split('\t')[args.rsids_col_num - 1]
-                    for dbsnp_zst_line in dbsnp_prs.prs(ann_rsid):
-                        empty_res = False
-                        trg_file_opened.write(ann_file_line +
+                    dbsnp_zst_line = rsid_to_coords(ann_rsid,
+                                                    dbsnp_prs,
+                                                    rsmerged_prs,
+                                                    parse_rsmerged_line)
+                    if dbsnp_zst_line:
+                        trg_file_opened.write(ann_file_line + '\t' +
                                               dbsnp_zst_line)
-                        break
-                    if empty_res:
-                        for rsmerged_zst_line in rsmerged_prs.prs(ann_rsid):
-                            ann_rsid_syns = parse_rsmerged_line(rsmerged_zst_line)
-                            for dbsnp_zst_line in dbsnp_prs.prs(ann_rsid_syns):
-                                empty_res = False
-                                trg_file_opened.write(ann_file_line +
-                                                      dbsnp_zst_line)
-                                break
-                            if not empty_res:
-                                break
-                        else:
-                            dump_file_opened.write(ann_file_line + '\n')
+                    else:
+                        dump_file_opened.write(ann_file_line + '\n')
 
 
 res_files_crt_time = datetime.now()
@@ -137,7 +139,8 @@ res_files_crt_time = datetime.now()
 perf['ann'] = ann(args,
                   res_files_crt_time,
                   dbsnp_prs,
-                  rsmerged_prs)[1]
+                  rsmerged_prs,
+                  parse_rsmerged_line)[1]
 
 perf_file_path = os.path.join(args.trg_dir_path,
                               f'ann_perf_{res_files_crt_time}.json')
