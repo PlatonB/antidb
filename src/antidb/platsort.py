@@ -3,8 +3,9 @@ import os
 from multiprocessing import Pool
 from functools import partial
 from contextlib import ExitStack
+from collections import deque
 
-__version__ = 'v0.1.0'
+__version__ = 'v0.2.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -73,6 +74,7 @@ def pre_sort(src_file_path,
 
 def mrg_sort(presrtd_file_paths,
              mrg_file_suff,
+             chunk_elems_quan=10000000,
              delimiter='\t',
              src_file_colinds=None):
     if not presrtd_file_paths:
@@ -82,35 +84,49 @@ def mrg_sort(presrtd_file_paths,
         os.rename(presrtd_file_paths[0],
                   mrg_file_path)
         return mrg_file_path
+    chunk_elems_quan //= len(presrtd_file_paths)
     with ExitStack() as stack:
-        srtd_files_opened = [stack.enter_context(open(presrtd_file_path))
-                             for presrtd_file_path in presrtd_file_paths]
-        presrtd_file_lines = [presrtd_file_opened.readline()
-                              for presrtd_file_opened in srtd_files_opened]
-        presrtd_file_line_inds = list(range(len(presrtd_file_lines)))
+        presrtd_files_opened = [stack.enter_context(open(presrtd_file_path))
+                                for presrtd_file_path in presrtd_file_paths]
+        presrtd_files_opened_quan = len(presrtd_files_opened)
+        chunks = []
+        for presrtd_file_opened in presrtd_files_opened:
+            chunks.append(deque([]))
+            for chunk_vert_ind in range(chunk_elems_quan):
+                presrtd_file_line = presrtd_file_opened.readline()
+                if presrtd_file_line:
+                    chunks[-1].append(presrtd_file_line)
+                else:
+                    break
         with open(mrg_file_path, mode='w') as mrg_file_opened:
             while True:
-                if len(srtd_files_opened) == 1:
-                    mrg_file_opened.write(presrtd_file_lines[0])
-                    for presrtd_file_line in srtd_files_opened[0]:
+                if presrtd_files_opened_quan == 1:
+                    for chunk_line in chunks[0]:
+                        mrg_file_opened.write(chunk_line)
+                    for presrtd_file_line in presrtd_files_opened[0]:
                         mrg_file_opened.write(presrtd_file_line)
                     break
-                min_presrtd_file_line = min(presrtd_file_lines,
-                                            key=partial(natur_sort_rule,
-                                                        delimiter=delimiter,
-                                                        src_file_colinds=src_file_colinds))
-                min_presrtd_file_line_inds = [presrtd_file_line_ind
-                                              for presrtd_file_line_ind in presrtd_file_line_inds
-                                              if presrtd_file_lines[presrtd_file_line_ind] == min_presrtd_file_line]
-                for min_presrtd_file_line_ind in min_presrtd_file_line_inds:
-                    mrg_file_opened.write(presrtd_file_lines[min_presrtd_file_line_ind])
-                    presrtd_file_line = srtd_files_opened[min_presrtd_file_line_ind].readline()
-                    if not presrtd_file_line:
-                        del srtd_files_opened[min_presrtd_file_line_ind]
-                        del presrtd_file_lines[min_presrtd_file_line_ind]
-                        del presrtd_file_line_inds[min_presrtd_file_line_ind]
-                        break
-                    presrtd_file_lines[min_presrtd_file_line_ind] = presrtd_file_line
+                chunk_fir_lines = [chunks[chunk_horiz_ind][0]
+                                   for chunk_horiz_ind in range(presrtd_files_opened_quan)]
+                min_chunk_fir_line = min(chunk_fir_lines,
+                                         key=partial(natur_sort_rule,
+                                                     delimiter=delimiter,
+                                                     src_file_colinds=src_file_colinds))
+                for chunk_horiz_ind in range(presrtd_files_opened_quan):
+                    if chunk_fir_lines[chunk_horiz_ind] == min_chunk_fir_line:
+                        mrg_file_opened.write(chunks[chunk_horiz_ind].popleft())
+                        if not chunks[chunk_horiz_ind]:
+                            for chunk_vert_ind in range(chunk_elems_quan):
+                                presrtd_file_line = presrtd_files_opened[chunk_horiz_ind].readline()
+                                if presrtd_file_line:
+                                    chunks[chunk_horiz_ind].append(presrtd_file_line)
+                                else:
+                                    break
+                            if not chunks[chunk_horiz_ind]:
+                                del presrtd_files_opened[chunk_horiz_ind]
+                                presrtd_files_opened_quan -= 1
+                                del chunks[chunk_horiz_ind]
+                                break
     return mrg_file_path
 
 
