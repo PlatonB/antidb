@@ -1,11 +1,10 @@
 import re
 import os
 from multiprocessing import Pool
+from heapq import merge
 from functools import partial
-from contextlib import ExitStack
-from collections import deque
 
-__version__ = 'v0.2.0'
+__version__ = 'v0.3.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -35,6 +34,12 @@ def natur_sort_rule(src_file_line,
             src_file_subcells.insert(0, float('+inf'))
         spl_file_row.append(src_file_subcells)
     return spl_file_row
+
+
+def iter_file(src_file_path):
+    with open(src_file_path) as src_file_opened:
+        for src_file_line in src_file_opened:
+            yield src_file_line
 
 
 def pre_sort(src_file_path,
@@ -74,7 +79,6 @@ def pre_sort(src_file_path,
 
 def mrg_sort(presrtd_file_paths,
              mrg_file_suff,
-             chunk_elems_quan=10000000,
              delimiter='\t',
              src_file_colinds=None):
     if not presrtd_file_paths:
@@ -84,49 +88,13 @@ def mrg_sort(presrtd_file_paths,
         os.rename(presrtd_file_paths[0],
                   mrg_file_path)
         return mrg_file_path
-    chunk_elems_quan //= len(presrtd_file_paths)
-    with ExitStack() as stack:
-        presrtd_files_opened = [stack.enter_context(open(presrtd_file_path))
-                                for presrtd_file_path in presrtd_file_paths]
-        presrtd_files_opened_quan = len(presrtd_files_opened)
-        chunks = []
-        for presrtd_file_opened in presrtd_files_opened:
-            chunks.append(deque([]))
-            for chunk_vert_ind in range(chunk_elems_quan):
-                presrtd_file_line = presrtd_file_opened.readline()
-                if presrtd_file_line:
-                    chunks[-1].append(presrtd_file_line)
-                else:
-                    break
-        with open(mrg_file_path, mode='w') as mrg_file_opened:
-            while True:
-                if presrtd_files_opened_quan == 1:
-                    for chunk_line in chunks[0]:
-                        mrg_file_opened.write(chunk_line)
-                    for presrtd_file_line in presrtd_files_opened[0]:
-                        mrg_file_opened.write(presrtd_file_line)
-                    break
-                chunk_fir_lines = [chunks[chunk_horiz_ind][0]
-                                   for chunk_horiz_ind in range(presrtd_files_opened_quan)]
-                min_chunk_fir_line = min(chunk_fir_lines,
-                                         key=partial(natur_sort_rule,
-                                                     delimiter=delimiter,
-                                                     src_file_colinds=src_file_colinds))
-                for chunk_horiz_ind in range(presrtd_files_opened_quan):
-                    if chunk_fir_lines[chunk_horiz_ind] == min_chunk_fir_line:
-                        mrg_file_opened.write(chunks[chunk_horiz_ind].popleft())
-                        if not chunks[chunk_horiz_ind]:
-                            for chunk_vert_ind in range(chunk_elems_quan):
-                                presrtd_file_line = presrtd_files_opened[chunk_horiz_ind].readline()
-                                if presrtd_file_line:
-                                    chunks[chunk_horiz_ind].append(presrtd_file_line)
-                                else:
-                                    break
-                            if not chunks[chunk_horiz_ind]:
-                                del presrtd_files_opened[chunk_horiz_ind]
-                                presrtd_files_opened_quan -= 1
-                                del chunks[chunk_horiz_ind]
-                                break
+    with open(mrg_file_path, mode='w') as mrg_file_opened:
+        for mrg_file_line in merge(*map(iter_file,
+                                        presrtd_file_paths),
+                                   key=partial(natur_sort_rule,
+                                               delimiter=delimiter,
+                                               src_file_colinds=src_file_colinds)):
+            mrg_file_opened.write(mrg_file_line)
     return mrg_file_path
 
 
