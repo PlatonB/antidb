@@ -4,7 +4,7 @@ from multiprocessing import Pool
 from heapq import merge
 from functools import partial
 
-__version__ = 'v0.3.0'
+__version__ = 'v0.4.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -42,16 +42,17 @@ def iter_file(src_file_path):
             yield src_file_line
 
 
-def pre_sort(src_file_path,
-             chunk_elems_quan=10000000,
-             delimiter='\t',
-             src_file_colinds=None):
+def pre_srt(src_file_path,
+            chunk_elems_quan=10000000,
+            delimiter='\t',
+            src_file_colinds=None):
     with open(src_file_path) as src_file_opened:
         while True:
             src_file_lstart = src_file_opened.tell()
             if not src_file_opened.readline().startswith('#'):
                 src_file_opened.seek(src_file_lstart)
                 break
+        presrtd_file_paths = []
         chunk, chunk_len, chunk_num = [], 0, 0
         for src_file_line in src_file_opened:
             chunk.append(src_file_line)
@@ -59,6 +60,7 @@ def pre_sort(src_file_path,
             if chunk_len == chunk_elems_quan:
                 chunk_num += 1
                 presrtd_file_path = f'{src_file_path}.{chunk_num}'
+                presrtd_file_paths.append(presrtd_file_path)
                 chunk.sort(key=partial(natur_sort_rule,
                                        delimiter=delimiter,
                                        src_file_colinds=src_file_colinds))
@@ -69,21 +71,26 @@ def pre_sort(src_file_path,
         if chunk:
             chunk_num += 1
             presrtd_file_path = f'{src_file_path}.{chunk_num}'
+            presrtd_file_paths.append(presrtd_file_path)
             chunk.sort(key=partial(natur_sort_rule,
                                    delimiter=delimiter,
                                    src_file_colinds=src_file_colinds))
             with open(presrtd_file_path, mode='w') as presrtd_file_opened:
                 for presrtd_file_line in chunk:
                     presrtd_file_opened.write(presrtd_file_line)
+    return presrtd_file_paths
 
 
-def mrg_sort(presrtd_file_paths,
-             mrg_file_suff,
-             delimiter='\t',
-             src_file_colinds=None):
+def mrg_srt(presrtd_file_paths,
+            mrg_file_suff='srtd',
+            delimiter='\t',
+            src_file_colinds=None):
     if not presrtd_file_paths:
         return None
-    mrg_file_path = f'{presrtd_file_paths[0]}.{mrg_file_suff}'
+    presrtd_file_common_path = re.sub(r'\.\d+$',
+                                      '',
+                                      presrtd_file_paths[0])
+    mrg_file_path = f'{presrtd_file_common_path}.{mrg_file_suff}'
     if len(presrtd_file_paths) == 1:
         os.rename(presrtd_file_paths[0],
                   mrg_file_path)
@@ -98,58 +105,19 @@ def mrg_sort(presrtd_file_paths,
     return mrg_file_path
 
 
-def pair_sort(src_file_path,
-              max_proc_quan=4,
-              delimiter='\t',
-              src_file_colinds=None):
-    src_dir_path, src_file_name = os.path.split(src_file_path)
-    presrtd_file_paths = [os.path.join(src_dir_path, any_file_name)
-                          for any_file_name in os.listdir(src_dir_path)
-                          if re.search(f'{src_file_name}.\d+', any_file_name)]
-    presrtd_files_quan = len(presrtd_file_paths)
-    if presrtd_files_quan == 1:
-        mrg_file_path = mrg_sort(presrtd_file_paths,
-                                 'srtd',
+def srt(src_file_path,
+        chunk_elems_quan=10000000,
+        delimiter='\t',
+        src_file_colinds=None,
+        mrg_file_suff='srtd'):
+    presrtd_file_paths = pre_srt(src_file_path,
+                                 chunk_elems_quan,
                                  delimiter,
                                  src_file_colinds)
-        os.rename(mrg_file_path,
-                  re.sub(r'(?:\.\d+)+(?=\.srtd)',
-                         '', mrg_file_path))
-        return None
-    elif presrtd_files_quan % 2 == 1:
-        del presrtd_file_paths[-1]
-        presrtd_files_quan -= 1
-    presrtd_file_pairs = [presrtd_file_paths[presrtd_file_ind:presrtd_file_ind + 2]
-                          for presrtd_file_ind in range(0, presrtd_files_quan, 2)]
-    presrtd_file_pairs_quan = len(presrtd_file_pairs)
-    presrtd_files_pair_inds = list(range(1, presrtd_file_pairs_quan + 1))
-    proc_quan = min(max_proc_quan,
-                    presrtd_file_pairs_quan,
-                    os.cpu_count() // 2)
-    with Pool(proc_quan) as pool_obj:
-        pool_obj.starmap(partial(mrg_sort,
-                                 delimiter=delimiter,
-                                 src_file_colinds=src_file_colinds),
-                         zip(presrtd_file_pairs,
-                             presrtd_files_pair_inds))
+    mrg_file_path = mrg_srt(presrtd_file_paths,
+                            mrg_file_suff,
+                            delimiter,
+                            src_file_colinds)
     for presrtd_file_path in presrtd_file_paths:
         os.remove(presrtd_file_path)
-    pair_sort(src_file_path,
-              max_proc_quan,
-              delimiter,
-              src_file_colinds)
-
-
-def plat_sort(src_file_path,
-              chunk_elems_quan=10000000,
-              max_proc_quan=8,
-              delimiter='\t',
-              src_file_colinds=0):
-    pre_sort(src_file_path,
-             chunk_elems_quan,
-             delimiter,
-             src_file_colinds)
-    pair_sort(src_file_path,
-              max_proc_quan,
-              delimiter,
-              src_file_colinds)
+    return mrg_file_path
