@@ -6,11 +6,13 @@ from datetime import datetime
 from io import TextIOWrapper
 from decimal import Decimal
 from bisect import bisect
+from functools import partial
+from antisrt import SrtRules, Srt
 from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v1.6.0'
+__version__ = 'v2.0.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -32,16 +34,18 @@ class FileNotFoundError(Exception):
         super().__init__(err_msg)
 
 
-class Idx():
+class Idx(SrtRules, Srt):
     def __init__(self,
                  db_file_path,
                  idx_prefix,
                  compr_level=6,
                  compr_frame_size=1024 * 1024,
                  compr_chunk_size=1024 * 1024 * 1024,
-                 compr_chunk_elems_quan=1024 * 1024 * 1024 // 72,
-                 unidx_lines_quan=1000):
-        self.db_file_path = db_file_path
+                 compr_chunk_elems_quan=10000000,
+                 unidx_lines_quan=1000,
+                 srt_rule=None,
+                 **srt_rule_kwargs):
+        self.db_file_path = os.path.normpath(db_file_path)
         if os.path.basename(db_file_path).endswith('.zst'):
             self.db_zst_path = self.db_file_path[:]
         else:
@@ -55,6 +59,17 @@ class Idx():
         self.compr_frame_size = compr_frame_size
         self.compr_chunk_size = compr_chunk_size
         self.compr_chunk_elems_quan = compr_chunk_elems_quan
+        if srt_rule:
+            self.srt_rule = srt_rule
+        else:
+            self.srt_rule = self.natur
+        if srt_rule_kwargs:
+            self.srt_rule_kwargs = srt_rule_kwargs
+        else:
+            self.srt_rule_kwargs = {}
+        super().__init__(unsrtd_file_path=self.full_idx_tmp_path,
+                         srt_rule=self.srt_rule,
+                         **self.srt_rule_kwargs)
         self.unidx_lines_quan = unidx_lines_quan
         self.perf = []
 
@@ -124,7 +139,8 @@ class Idx():
 
     @count_exec_time
     def crt_full_idx_tmp_srtd(self):
-        os.system(f"LC_ALL=C sort -t ',' -k1,1 {self.full_idx_tmp_path} > {self.full_idx_tmp_srtd_path}")
+        self.pre_srt(chunk_elems_quan=self.compr_chunk_elems_quan)
+        self.mrg_srt()
 
     @count_exec_time
     def crt_full_idx(self):
@@ -160,8 +176,15 @@ class Idx():
 
 
 class Prs(Idx):
-    def __init__(self, db_file_path, idx_prefix):
-        super().__init__(db_file_path, idx_prefix)
+    def __init__(self,
+                 db_file_path,
+                 idx_prefix,
+                 srt_rule=None,
+                 **srt_rule_kwargs):
+        super().__init__(db_file_path,
+                         idx_prefix,
+                         srt_rule,
+                         **srt_rule_kwargs)
         if not os.path.exists(self.db_zst_path):
             raise FileNotFoundError(self.db_zst_path)
         else:
@@ -197,7 +220,10 @@ class Prs(Idx):
         for your_val in your_vals:
             your_val = str(your_val)
             mem_idx_left_val_ind = bisect(self.mem_idx_your_vals,
-                                          your_val) - 1
+                                          self.srt_rule(your_val,
+                                                        **self.srt_rule_kwargs),
+                                          key=partial(self.srt_rule,
+                                                      **self.srt_rule_kwargs)) - 1
             full_idx_lstart = self.full_idx_lstarts[mem_idx_left_val_ind]
             self.full_idx_opened.seek(full_idx_lstart)
             for line_idx in range(self.unidx_lines_quan + 1):

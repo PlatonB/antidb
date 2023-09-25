@@ -3,7 +3,7 @@ import os
 from heapq import merge
 from functools import partial
 
-__version__ = 'v1.0.0'
+__version__ = 'v1.0.1'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -39,14 +39,16 @@ class SrtRules():
 
 class Srt():
     def __init__(self,
-                 src_file_path,
+                 unsrtd_file_path,
                  srt_rule,
                  **srt_rule_kwargs):
-        self.src_file_path = os.path.normpath(src_file_path)
+        self.unsrtd_file_path = os.path.normpath(unsrtd_file_path)
         self.presrtd_file_paths = []
         self.srt_rule = srt_rule
         if srt_rule_kwargs:
             self.srt_rule_kwargs = srt_rule_kwargs
+        else:
+            self.srt_rule_kwargs = {}
 
     @staticmethod
     def iter_file(file_path):
@@ -56,7 +58,7 @@ class Srt():
 
     def pre_srt(self,
                 chunk_elems_quan=10000000):
-        with open(self.src_file_path) as src_file_opened:
+        with open(self.unsrtd_file_path) as src_file_opened:
             while True:
                 src_file_lstart = src_file_opened.tell()
                 if not src_file_opened.readline().startswith('#'):
@@ -68,7 +70,7 @@ class Srt():
                 chunk_len += 1
                 if chunk_len == chunk_elems_quan:
                     chunk_num += 1
-                    presrtd_file_path = f'{self.src_file_path}.{chunk_num}'
+                    presrtd_file_path = f'{self.unsrtd_file_path}.{chunk_num}'
                     self.presrtd_file_paths.append(presrtd_file_path)
                     chunk.sort(key=partial(self.srt_rule,
                                            **self.srt_rule_kwargs))
@@ -78,7 +80,7 @@ class Srt():
                     chunk, chunk_len = [], 0
             if chunk:
                 chunk_num += 1
-                presrtd_file_path = f'{self.src_file_path}.{chunk_num}'
+                presrtd_file_path = f'{self.unsrtd_file_path}.{chunk_num}'
                 self.presrtd_file_paths.append(presrtd_file_path)
                 chunk.sort(key=partial(self.srt_rule,
                                        **self.srt_rule_kwargs))
