@@ -12,9 +12,11 @@ par_dir_path = PurePath(__file__).parent.parent
 sys.path.append(par_dir_path.joinpath('src/antidb').as_posix())
 from antidb import (Idx,
                     Prs)
+from antisrt import (SrtRules,
+                     Srt)
 # autopep8: on
 
-__version__ = 'v1.4.0'
+__version__ = 'v2.0.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -39,7 +41,7 @@ def remove_new_files(idx_obj):
     os.remove(idx_obj.mem_idx_path)
 
 
-class RefsnpChrmtJsonTest(unittest.TestCase):
+class AntidbTests(unittest.TestCase):
     mt_jsonbz2_url = 'https://ftp.ncbi.nih.gov/snp/archive/b156/JSON/refsnp-chrMT.json.bz2'
     mt_json_path = PurePath(PurePath(__file__).parent,
                             PurePath(mt_jsonbz2_url).name[:-4]).as_posix()
@@ -172,6 +174,96 @@ class RefsnpChrmtJsonTest(unittest.TestCase):
                          ['2001030',
                           '1556422499'])
         remove_new_files(mt_cln_idx)
+
+
+class AntisrtTests(unittest.TestCase):
+    trf_bedgz_url = 'https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.trf.bed.gz'
+    trf_bed_path = PurePath(PurePath(__file__).parent,
+                            PurePath(trf_bedgz_url).name[:-3]).as_posix()
+    if not os.path.exists(trf_bed_path):
+        os.system(f'''
+                  wget -q -O - {trf_bedgz_url} |
+                  gzip -d > {trf_bed_path}''')
+    with open(trf_bed_path) as trf_bed_opened:
+        trf_bed_content = trf_bed_opened.readlines()
+    os.remove(trf_bed_path)
+
+    def test_trf_floats(self):
+        if not os.path.exists(self.trf_bed_path):
+            with open(self.trf_bed_path, 'w') as trf_bed_opened:
+                for trf_bed_line in self.trf_bed_content:
+                    trf_bed_opened.write(trf_bed_line)
+        trf_bed_floats = []
+        trf_bed_lines_quan = 0
+        for trf_bed_line in self.trf_bed_content:
+            trf_bed_lines_quan += 1
+            trf_bed_floats.append(float(trf_bed_line.split('\t')[5]))
+        trf_bed_floats.sort()
+        self.assertEqual(trf_bed_lines_quan,
+                         432604)
+        srt = Srt(self.trf_bed_path,
+                  SrtRules().natur,
+                  delimiter='\t',
+                  src_file_colinds=5)
+        srt.pre_srt(chunk_elems_quan=float('+inf'))
+        nat_presrtd_trf_path = f'{self.trf_bed_path}.1'
+        self.assertTrue(os.path.exists(nat_presrtd_trf_path))
+        self.assertEqual(srt.presrtd_file_paths,
+                         [nat_presrtd_trf_path])
+        with open(nat_presrtd_trf_path) as nat_presrtd_trf_opened:
+            nat_presrtd_trf_lines_quan = 0
+            nat_presrtd_trf_floats = []
+            for nat_presrtd_trf_line in nat_presrtd_trf_opened:
+                nat_presrtd_trf_lines_quan += 1
+                nat_presrtd_trf_floats.append(float(nat_presrtd_trf_line.split('\t')[5]))
+        self.assertEqual(nat_presrtd_trf_lines_quan,
+                         432604)
+        self.assertEqual(trf_bed_floats,
+                         nat_presrtd_trf_floats)
+        srt.mrg_srt()
+        nat_srtd_trf_path = f'{self.trf_bed_path}.srtd'
+        self.assertTrue(os.path.exists(nat_srtd_trf_path))
+        self.assertFalse(os.path.exists(nat_presrtd_trf_path))
+        self.assertFalse(srt.presrtd_file_paths)
+        with open(nat_srtd_trf_path) as nat_srtd_trf_opened:
+            nat_srtd_trf_lines_quan = 0
+            nat_srtd_trf_floats = []
+            for nat_srtd_trf_line in nat_srtd_trf_opened:
+                nat_srtd_trf_lines_quan += 1
+                nat_srtd_trf_floats.append(float(nat_srtd_trf_line.split('\t')[5]))
+        self.assertEqual(nat_srtd_trf_lines_quan,
+                         432604)
+        self.assertEqual(trf_bed_floats,
+                         nat_srtd_trf_floats)
+        os.remove(nat_srtd_trf_path)
+        srt.srt_rule = lambda src_file_line: float(src_file_line.split('\t')[5])
+        srt.srt_rule_kwargs = {}
+        srt.pre_srt(chunk_elems_quan=108151)
+        float_presrtd_trf_paths = [f'{self.trf_bed_path}.1',
+                                   f'{self.trf_bed_path}.2',
+                                   f'{self.trf_bed_path}.3',
+                                   f'{self.trf_bed_path}.4']
+        for float_presrtd_trf_path in float_presrtd_trf_paths:
+            self.assertTrue(os.path.exists(float_presrtd_trf_path))
+            with open(float_presrtd_trf_path) as float_presrtd_trf_opened:
+                float_presrtd_trf_lines_quan = 0
+                for float_presrtd_trf_line in float_presrtd_trf_opened:
+                    float_presrtd_trf_lines_quan += 1
+            self.assertEqual(float_presrtd_trf_lines_quan,
+                             108151)
+        self.assertFalse(os.path.exists(f'{self.trf_bed_path}.0'))
+        self.assertFalse(os.path.exists(f'{self.trf_bed_path}.5'))
+        self.assertEqual(sorted(srt.presrtd_file_paths),
+                         float_presrtd_trf_paths)
+        srt.mrg_srt(mrgd_file_suff='sorted',
+                    del_presrtd_files=False)
+        float_srtd_trf_path = f'{self.trf_bed_path}.sorted'
+        self.assertTrue(os.path.exists(float_srtd_trf_path))
+        for float_presrtd_trf_path in float_presrtd_trf_paths:
+            self.assertTrue(os.path.exists(float_presrtd_trf_path))
+            os.remove(float_presrtd_trf_path)
+        os.remove(float_srtd_trf_path)
+        os.remove(self.trf_bed_path)
 
 
 if __name__ == "__main__":

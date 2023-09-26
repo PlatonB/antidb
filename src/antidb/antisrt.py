@@ -3,7 +3,7 @@ import os
 from heapq import merge
 from functools import partial
 
-__version__ = 'v1.0.1'
+__version__ = 'v1.0.2'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -100,6 +100,7 @@ class Srt():
         if len(self.presrtd_file_paths) == 1:
             os.rename(self.presrtd_file_paths[0],
                       mrgd_file_path)
+            self.presrtd_file_paths = []
             return mrgd_file_path
         with open(mrgd_file_path, mode='w') as mrgd_file_opened:
             for mrgd_file_line in merge(*map(self.iter_file,
@@ -110,4 +111,5 @@ class Srt():
         if del_presrtd_files:
             for presrtd_file_path in self.presrtd_file_paths:
                 os.remove(presrtd_file_path)
+            self.presrtd_file_paths = []
         return mrgd_file_path
