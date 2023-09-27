@@ -1,9 +1,11 @@
 import re
 import os
+from typing import (Callable,
+                    Any)
 from heapq import merge
 from functools import partial
 
-__version__ = 'v1.0.2'
+__version__ = 'v1.1.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -11,9 +13,9 @@ __authors__ = [{'name': 'Platon Bykadorov',
 
 class SrtRules():
     @staticmethod
-    def natur(src_file_line,
-              delimiter='\t',
-              src_file_colinds=None):
+    def natur(src_file_line: str,
+              delimiter: str = '\t',
+              src_file_colinds: None | int | list | tuple = None) -> list:
         src_file_row = src_file_line.rstrip().split(delimiter)
         if type(src_file_colinds) is int:
             src_file_row = [src_file_row[src_file_colinds]]
@@ -24,13 +26,16 @@ class SrtRules():
         for src_file_cell in src_file_row:
             src_file_subcells = list(filter(lambda src_file_subcell:
                                             src_file_subcell,
-                                            re.split(r'(\d+)',
+                                            re.split(r'(\d+\.?\d*)',
                                                      src_file_cell)))
             for src_file_subcell_ind in range(len(src_file_subcells)):
                 try:
                     src_file_subcells[src_file_subcell_ind] = int(src_file_subcells[src_file_subcell_ind])
                 except ValueError:
-                    pass
+                    try:
+                        src_file_subcells[src_file_subcell_ind] = float(src_file_subcells[src_file_subcell_ind])
+                    except ValueError:
+                        pass
             if type(src_file_subcells[0]) is str:
                 src_file_subcells.insert(0, float('+inf'))
             spl_file_row.append(src_file_subcells)
@@ -39,9 +44,9 @@ class SrtRules():
 
 class Srt():
     def __init__(self,
-                 unsrtd_file_path,
-                 srt_rule,
-                 **srt_rule_kwargs):
+                 unsrtd_file_path: str,
+                 srt_rule: Callable,
+                 **srt_rule_kwargs: Any):
         self.unsrtd_file_path = os.path.normpath(unsrtd_file_path)
         self.presrtd_file_paths = []
         self.srt_rule = srt_rule
@@ -51,13 +56,13 @@ class Srt():
             self.srt_rule_kwargs = {}
 
     @staticmethod
-    def iter_file(file_path):
+    def iter_file(file_path: str) -> str:
         with open(file_path) as file_opened:
             for file_line in file_opened:
                 yield file_line
 
     def pre_srt(self,
-                chunk_elems_quan=10000000):
+                chunk_elems_quan: int = 10000000):
         with open(self.unsrtd_file_path) as src_file_opened:
             while True:
                 src_file_lstart = src_file_opened.tell()
@@ -89,8 +94,8 @@ class Srt():
                         presrtd_file_opened.write(presrtd_file_line)
 
     def mrg_srt(self,
-                mrgd_file_suff='srtd',
-                del_presrtd_files=True):
+                mrgd_file_suff: str = 'srtd',
+                del_presrtd_files: bool = True) -> None | str:
         if not self.presrtd_file_paths:
             return None
         presrtd_file_common_path = re.sub(r'\.\d+$',
