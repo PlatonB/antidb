@@ -16,7 +16,7 @@ from antisrt import (SrtRules,
                      Srt)
 # autopep8: on
 
-__version__ = 'v2.2.0'
+__version__ = 'v2.3.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -247,7 +247,10 @@ class SrtTests(unittest.TestCase):
         trf_bed_lines_quan = 0
         for trf_bed_line in self.trf_bed_content:
             trf_bed_lines_quan += 1
-            trf_bed_floats.append(float(trf_bed_line.split('\t')[5]))
+            trf_bed_row = trf_bed_line.split('\t')
+            self.assertEqual(len(trf_bed_row),
+                             16)
+            trf_bed_floats.append(float(trf_bed_row[5]))
         trf_bed_floats.sort()
         self.assertEqual(trf_bed_lines_quan,
                          432604)
@@ -335,6 +338,57 @@ class SrtTests(unittest.TestCase):
             os.remove(float_presrtd_trf_path)
         os.remove(float_srtd_trf_path)
         os.remove(self.trf_bed_path)
+
+    def test_trf_2_cols(self):
+        if not os.path.exists(self.trf_bed_path):
+            with open(self.trf_bed_path, 'w') as trf_bed_opened:
+                for trf_bed_line in self.trf_bed_content:
+                    trf_bed_opened.write(trf_bed_line)
+        str_float_gnusrtd_path = f'{self.trf_bed_path}.gnusrtd'
+        os.system(f"""LC_ALL=C sort -s -t '{chr(9)}' -k16,16 -k15,15n \
+                  {self.trf_bed_path} > {str_float_gnusrtd_path}""")
+        self.assertTrue(os.path.exists(str_float_gnusrtd_path))
+        with open(str_float_gnusrtd_path) as str_float_gnusrtd_opened:
+            str_float_gnusrtd_lines_quan = 0
+            gnusrtd_strs_floats = []
+            for str_float_gnusrtd_line in str_float_gnusrtd_opened:
+                str_float_gnusrtd_lines_quan += 1
+                str_float_gnusrtd_row = str_float_gnusrtd_line.split('\t')
+                self.assertEqual(len(str_float_gnusrtd_row),
+                                 16)
+                gnusrtd_strs_floats.append([float(str_float_gnusrtd_row[14]),
+                                            str_float_gnusrtd_row[15]])
+        self.assertEqual(str_float_gnusrtd_lines_quan,
+                         432604)
+        srt = Srt(self.trf_bed_path,
+                  SrtRules().natur,
+                  delimiter='\t',
+                  src_file_colinds=[15, 14])
+        srt.pre_srt(chunk_elems_quan=108150)
+        self.assertEqual(len(srt.presrtd_file_paths),
+                         5)
+        for presrtd_file_path in srt.presrtd_file_paths:
+            self.assertTrue(os.path.exists(presrtd_file_path))
+        str_float_mrgd_path = srt.mrg_srt(mrgd_file_suff='mrgd')
+        self.assertFalse(srt.presrtd_file_paths)
+        self.assertTrue(str_float_mrgd_path)
+        with open(str_float_mrgd_path) as str_float_mrgd_opened:
+            str_float_mrgd_lines_quan = 0
+            mrgd_strs_floats = []
+            for str_float_mrgd_line in str_float_mrgd_opened:
+                str_float_mrgd_lines_quan += 1
+                str_float_mrgd_row = str_float_mrgd_line.split('\t')
+                self.assertEqual(len(str_float_mrgd_row),
+                                 16)
+                mrgd_strs_floats.append([float(str_float_mrgd_row[14]),
+                                         str_float_mrgd_row[15]])
+        self.assertEqual(str_float_mrgd_lines_quan,
+                         432604)
+        self.assertEqual(mrgd_strs_floats,
+                         gnusrtd_strs_floats)
+        os.remove(self.trf_bed_path)
+        os.remove(str_float_gnusrtd_path)
+        os.remove(str_float_mrgd_path)
 
 
 if __name__ == "__main__":
