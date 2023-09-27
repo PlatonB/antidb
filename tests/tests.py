@@ -16,7 +16,7 @@ from antisrt import (SrtRules,
                      Srt)
 # autopep8: on
 
-__version__ = 'v2.0.0'
+__version__ = 'v2.1.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -215,7 +215,10 @@ class AntisrtTests(unittest.TestCase):
             nat_presrtd_trf_floats = []
             for nat_presrtd_trf_line in nat_presrtd_trf_opened:
                 nat_presrtd_trf_lines_quan += 1
-                nat_presrtd_trf_floats.append(float(nat_presrtd_trf_line.split('\t')[5]))
+                nat_presrtd_trf_row = nat_presrtd_trf_line.split('\t')
+                self.assertEqual(len(nat_presrtd_trf_row),
+                                 16)
+                nat_presrtd_trf_floats.append(float(nat_presrtd_trf_row[5]))
         self.assertEqual(nat_presrtd_trf_lines_quan,
                          432604)
         self.assertEqual(trf_bed_floats,
@@ -230,7 +233,10 @@ class AntisrtTests(unittest.TestCase):
             nat_srtd_trf_floats = []
             for nat_srtd_trf_line in nat_srtd_trf_opened:
                 nat_srtd_trf_lines_quan += 1
-                nat_srtd_trf_floats.append(float(nat_srtd_trf_line.split('\t')[5]))
+                nat_srtd_trf_row = nat_srtd_trf_line.split('\t')
+                self.assertEqual(len(nat_srtd_trf_row),
+                                 16)
+                nat_srtd_trf_floats.append(float(nat_srtd_trf_row[5]))
         self.assertEqual(nat_srtd_trf_lines_quan,
                          432604)
         self.assertEqual(trf_bed_floats,
@@ -248,6 +254,8 @@ class AntisrtTests(unittest.TestCase):
             with open(float_presrtd_trf_path) as float_presrtd_trf_opened:
                 float_presrtd_trf_lines_quan = 0
                 for float_presrtd_trf_line in float_presrtd_trf_opened:
+                    self.assertEqual(len(float_presrtd_trf_line.split('\t')),
+                                     16)
                     float_presrtd_trf_lines_quan += 1
             self.assertEqual(float_presrtd_trf_lines_quan,
                              108151)
@@ -259,6 +267,19 @@ class AntisrtTests(unittest.TestCase):
                     del_presrtd_files=False)
         float_srtd_trf_path = f'{self.trf_bed_path}.sorted'
         self.assertTrue(os.path.exists(float_srtd_trf_path))
+        with open(float_srtd_trf_path) as float_srtd_trf_opened:
+            float_srtd_trf_lines_quan = 0
+            float_srtd_trf_floats = []
+            for float_srtd_trf_line in float_srtd_trf_opened:
+                float_srtd_trf_lines_quan += 1
+                float_srtd_trf_row = float_srtd_trf_line.split('\t')
+                self.assertEqual(len(float_srtd_trf_row),
+                                 16)
+                float_srtd_trf_floats.append(float(float_srtd_trf_row[5]))
+        self.assertEqual(float_srtd_trf_lines_quan,
+                         432604)
+        self.assertEqual(trf_bed_floats,
+                         float_srtd_trf_floats)
         for float_presrtd_trf_path in float_presrtd_trf_paths:
             self.assertTrue(os.path.exists(float_presrtd_trf_path))
             os.remove(float_presrtd_trf_path)
