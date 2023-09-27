@@ -16,7 +16,7 @@ from antisrt import (SrtRules,
                      Srt)
 # autopep8: on
 
-__version__ = 'v2.1.0'
+__version__ = 'v2.2.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -176,7 +176,57 @@ class AntidbTests(unittest.TestCase):
         remove_new_files(mt_cln_idx)
 
 
-class AntisrtTests(unittest.TestCase):
+class SrtRulesTests(unittest.TestCase):
+    srt_rules = SrtRules()
+
+    def test_natur_srt_rule(self):
+        self.assertEqual(self.srt_rules.natur('10'),
+                         [[10]])
+        self.assertEqual(self.srt_rules.natur('01'),
+                         [[1]])
+        self.assertEqual(self.srt_rules.natur('rs10'),
+                         [[float('+inf'), 'rs', 10]])
+        self.assertEqual(self.srt_rules.natur('rs01'),
+                         [[float('+inf'), 'rs', 1]])
+        self.assertEqual(self.srt_rules.natur('val1.5'),
+                         [[float('+inf'), 'val', 1.5]])
+        self.assertEqual(self.srt_rules.natur('val1.05'),
+                         [[float('+inf'), 'val', 1.05]])
+        self.assertEqual(self.srt_rules.natur('val1.05suff'),
+                         [[float('+inf'), 'val', 1.05, 'suff']])
+        self.assertEqual(self.srt_rules.natur('val1,05'),
+                         [[float('+inf'), 'val', 1, ',', 5]])
+        self.assertEqual(self.srt_rules.natur('val1,05suff'),
+                         [[float('+inf'), 'val', 1, ',', 5, 'suff']])
+        self.assertEqual(self.srt_rules.natur('I2a2a1b2a2a2-ZS20'),
+                         [[float('+inf'), 'I', 2, 'a', 2, 'a',
+                           1, 'b', 2, 'a', 2, 'a', 2, '-ZS', 20]])
+        self.assertEqual(self.srt_rules.natur('10\t11'),
+                         [[10], [11]])
+        self.assertEqual(self.srt_rules.natur('rs10\t11'),
+                         [[float('+inf'), 'rs', 10], [11]])
+        self.assertEqual(self.srt_rules.natur('10,11.1',
+                                              delimiter=','),
+                         [[10], [11.1]])
+        self.assertEqual(self.srt_rules.natur('10.1,11',
+                                              delimiter=',',
+                                              src_file_colinds=None),
+                         [[10.1], [11]])
+        self.assertEqual(self.srt_rules.natur('10,11.1',
+                                              delimiter=',',
+                                              src_file_colinds=1),
+                         [[11.1]])
+        self.assertEqual(self.srt_rules.natur('10.1,11',
+                                              delimiter=',',
+                                              src_file_colinds=[1, 0]),
+                         [[11], [10.1]])
+        self.assertEqual(self.srt_rules.natur('10,11.1',
+                                              delimiter='\t',
+                                              src_file_colinds=[0]),
+                         [[10, ',', 11.1]])
+
+
+class SrtTests(unittest.TestCase):
     trf_bedgz_url = 'https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.trf.bed.gz'
     trf_bed_path = PurePath(PurePath(__file__).parent,
                             PurePath(trf_bedgz_url).name[:-3]).as_posix()
