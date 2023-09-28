@@ -5,7 +5,7 @@ from typing import (Callable,
 from heapq import merge
 from functools import partial
 
-__version__ = 'v1.1.0'
+__version__ = 'v1.1.1'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -46,9 +46,13 @@ class Srt():
     def __init__(self,
                  unsrtd_file_path: str,
                  srt_rule: Callable,
+                 presrtd_file_paths: None | list = None,
                  **srt_rule_kwargs: Any):
         self.unsrtd_file_path = os.path.normpath(unsrtd_file_path)
-        self.presrtd_file_paths = []
+        if presrtd_file_paths:
+            self.presrtd_file_paths = presrtd_file_paths
+        else:
+            self.presrtd_file_paths = []
         self.srt_rule = srt_rule
         if srt_rule_kwargs:
             self.srt_rule_kwargs = srt_rule_kwargs
