@@ -16,7 +16,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v2.1.0'
+__version__ = 'v2.2.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -42,6 +42,7 @@ class Idx(SrtRules, Srt):
     def __init__(self,
                  db_file_path: str,
                  idx_prefix: str,
+                 your_line_parser: Callable,
                  compr_level: int = 6,
                  compr_frame_size: int = 1024 * 1024,
                  compr_chunk_size: int = 1024 * 1024 * 1024,
@@ -55,6 +56,7 @@ class Idx(SrtRules, Srt):
         else:
             self.db_zst_path = self.db_file_path + '.zst'
         self.idx_prefix = idx_prefix
+        self.your_line_parser = your_line_parser
         self.full_idx_path = f'{self.db_zst_path}.{self.idx_prefix}.full'
         self.full_idx_tmp_path = self.full_idx_path + '.tmp'
         self.full_idx_tmp_srtd_path = self.full_idx_tmp_path + '.srtd'
@@ -77,13 +79,13 @@ class Idx(SrtRules, Srt):
         self.unidx_lines_quan = unidx_lines_quan
         self.perf = []
 
-    def idx(self, your_line_parser: Callable):
+    def idx(self):
         if not os.path.exists(self.db_zst_path):
             self.perf.append(self.crt_db_zst())
             os.remove(self.db_file_path)
         if not os.path.exists(self.full_idx_tmp_path) \
                 and not os.path.exists(self.full_idx_path):
-            self.perf.append(self.crt_full_idx_tmp(your_line_parser))
+            self.perf.append(self.crt_full_idx_tmp())
         if not os.path.exists(self.full_idx_tmp_srtd_path) \
                 and not os.path.exists(self.full_idx_path):
             self.perf.append(self.crt_full_idx_tmp_srtd())
@@ -108,7 +110,7 @@ class Idx(SrtRules, Srt):
                     db_zst_opened.write(src_txt_chunk)
 
     @count_exec_time
-    def crt_full_idx_tmp(self, your_line_parser: Callable):
+    def crt_full_idx_tmp(self):
         with TextIOWrapper(SeekableZstdFile(self.db_zst_path,
                                             mode='r')) as db_zst_opened:
             with open(self.full_idx_tmp_path,
@@ -127,7 +129,7 @@ class Idx(SrtRules, Srt):
                         if chunk:
                             full_idx_tmp_opened.write('\n'.join(chunk) + '\n')
                         break
-                    your_line_parser_out = your_line_parser(db_zst_line)
+                    your_line_parser_out = self.your_line_parser(db_zst_line)
                     if not your_line_parser_out:
                         continue
                     elif type(your_line_parser_out) in [str, int, float, Decimal]:
@@ -188,6 +190,7 @@ class Prs(Idx):
                  **srt_rule_kwargs: Any):
         super().__init__(db_file_path,
                          idx_prefix,
+                         None,
                          srt_rule=srt_rule,
                          **srt_rule_kwargs)
         if not os.path.exists(self.db_zst_path):
