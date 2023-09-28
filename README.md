@@ -8,15 +8,15 @@ from antidb import (Idx,
                     Prs,
                     count_exec_time)
 
+__version__ = 'v1.0.0'
+
 dbsnp_vcf_path = '/path/to/GCF_000001405.40.zst'
 dbsnp_idx_prefix = 'all_rsids'
-
 dbsnp_idx = Idx(dbsnp_vcf_path,
-                dbsnp_idx_prefix)
-
-dbsnp_idx.idx(lambda dbsnp_zst_line:
-              dbsnp_zst_line.split('\t')[2])
-
+                dbsnp_idx_prefix,
+                lambda dbsnp_zst_line:
+                dbsnp_zst_line.split('\t')[2])
+dbsnp_idx.idx()
 dbsnp_prs = Prs(dbsnp_vcf_path,
                 dbsnp_idx_prefix)
 
@@ -54,6 +54,8 @@ from datetime import datetime
 from antidb import (Idx,
                     Prs,
                     count_exec_time)
+
+__version__ = 'v1.0.0'
 
 
 def parse_dbsnp_line(dbsnp_zst_line):
@@ -96,11 +98,13 @@ arg_parser.add_argument('-c', '--rsids-col-num', metavar='1', default=1, dest='r
 args = arg_parser.parse_args()
 
 dbsnp_idx = Idx(args.dbsnp_file_path,
-                'rsids__gnomad_cln')
-dbsnp_idx.idx(parse_dbsnp_line)
+                'rsids__gnomad_cln',
+                parse_dbsnp_line)
+dbsnp_idx.idx()
 rsmerged_idx = Idx(args.rsmerged_file_path,
-                   'rsids')
-rsmerged_idx.idx(parse_rsmerged_line)
+                   'rsids',
+                   parse_rsmerged_line)
+rsmerged_idx.idx()
 perf = {'dbsnp_idx': dbsnp_idx.perf,
         'rsmerged_idx': rsmerged_idx.perf}
 dbsnp_prs = Prs(args.dbsnp_file_path,
