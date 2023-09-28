@@ -10,13 +10,13 @@ from decimal import Decimal
 from warnings import warn
 from bisect import bisect
 from functools import partial
-from antisrt import (SrtRules,
-                     Srt)
+from .antisrt import (SrtRules,
+                      Srt)
 from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v2.2.0'
+__version__ = 'v2.2.1'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]

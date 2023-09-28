@@ -1,5 +1,6 @@
 # autopep8: off
-import sys
+import sys; sys.dont_write_bytecode = True
+# autopep8: on
 import unittest
 import os
 import json
@@ -7,16 +8,12 @@ from pathlib import PurePath
 from decimal import Decimal
 from random import shuffle
 import pyzstd
-sys.dont_write_bytecode = True
-par_dir_path = PurePath(__file__).parent.parent
-sys.path.append(par_dir_path.joinpath('src/antidb').as_posix())
-from antidb import (Idx,
-                    Prs)
-from antisrt import (SrtRules,
-                     Srt)
-# autopep8: on
+from src.antidb.antidb import (Idx,
+                               Prs)
+from src.antidb.antisrt import (SrtRules,
+                                Srt)
 
-__version__ = 'v2.5.0'
+__version__ = 'v2.6.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
