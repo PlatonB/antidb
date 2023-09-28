@@ -2,24 +2,28 @@
 import sys; sys.dont_write_bytecode = True
 # autopep8: on
 import os
+from typing import (Callable,
+                    Any)
 from datetime import datetime
 from io import TextIOWrapper
 from decimal import Decimal
+from warnings import warn
 from bisect import bisect
 from functools import partial
-from antisrt import SrtRules, Srt
+from antisrt import (SrtRules,
+                     Srt)
 from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v2.0.0'
+__version__ = 'v2.1.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
 
 
-def count_exec_time(any_func):
-    def wrapper(*args, **kwargs):
+def count_exec_time(any_func: Callable) -> Callable:
+    def wrapper(*args: Any, **kwargs: Any):
         exec_time_start = datetime.now()
         any_func(*args, **kwargs)
         return (any_func.__name__,
@@ -36,15 +40,15 @@ class FileNotFoundError(Exception):
 
 class Idx(SrtRules, Srt):
     def __init__(self,
-                 db_file_path,
-                 idx_prefix,
-                 compr_level=6,
-                 compr_frame_size=1024 * 1024,
-                 compr_chunk_size=1024 * 1024 * 1024,
-                 compr_chunk_elems_quan=10000000,
-                 unidx_lines_quan=1000,
-                 srt_rule=None,
-                 **srt_rule_kwargs):
+                 db_file_path: str,
+                 idx_prefix: str,
+                 compr_level: int = 6,
+                 compr_frame_size: int = 1024 * 1024,
+                 compr_chunk_size: int = 1024 * 1024 * 1024,
+                 compr_chunk_elems_quan: int = 10000000,
+                 unidx_lines_quan: int = 1000,
+                 srt_rule: None | Callable = None,
+                 **srt_rule_kwargs: Any):
         self.db_file_path = os.path.normpath(db_file_path)
         if os.path.basename(db_file_path).endswith('.zst'):
             self.db_zst_path = self.db_file_path[:]
@@ -73,7 +77,7 @@ class Idx(SrtRules, Srt):
         self.unidx_lines_quan = unidx_lines_quan
         self.perf = []
 
-    def idx(self, your_line_parser):
+    def idx(self, your_line_parser: Callable):
         if not os.path.exists(self.db_zst_path):
             self.perf.append(self.crt_db_zst())
             os.remove(self.db_file_path)
@@ -104,7 +108,7 @@ class Idx(SrtRules, Srt):
                     db_zst_opened.write(src_txt_chunk)
 
     @count_exec_time
-    def crt_full_idx_tmp(self, your_line_parser):
+    def crt_full_idx_tmp(self, your_line_parser: Callable):
         with TextIOWrapper(SeekableZstdFile(self.db_zst_path,
                                             mode='r')) as db_zst_opened:
             with open(self.full_idx_tmp_path,
@@ -162,6 +166,7 @@ class Idx(SrtRules, Srt):
             with TextIOWrapper(ZstdFile(self.mem_idx_path,
                                         mode='w',
                                         level_or_option=self.compr_settings)) as mem_idx_opened:
+                mem_idx_opened.write(f'idx_srt_rule_name={self.srt_rule.__name__}\n')
                 mem_idx_opened.write(f'unidx_lines_quan={self.unidx_lines_quan}\n')
                 while True:
                     full_idx_lstart = full_idx_opened.tell()
@@ -177,13 +182,13 @@ class Idx(SrtRules, Srt):
 
 class Prs(Idx):
     def __init__(self,
-                 db_file_path,
-                 idx_prefix,
-                 srt_rule=None,
-                 **srt_rule_kwargs):
+                 db_file_path: str,
+                 idx_prefix: str,
+                 srt_rule: None | Callable = None,
+                 **srt_rule_kwargs: Any):
         super().__init__(db_file_path,
                          idx_prefix,
-                         srt_rule,
+                         srt_rule=srt_rule,
                          **srt_rule_kwargs)
         if not os.path.exists(self.db_zst_path):
             raise FileNotFoundError(self.db_zst_path)
@@ -200,18 +205,24 @@ class Prs(Idx):
         else:
             self.mem_idx_opened = TextIOWrapper(ZstdFile(self.mem_idx_path,
                                                          mode='r'))
-        self.unidx_lines_quan, self.mem_idx_your_vals, self.full_idx_lstarts = self.read_mem_idx()
+        self.idx_srt_rule_name, self.unidx_lines_quan, self.mem_idx_your_vals, self.full_idx_lstarts = self.read_mem_idx()
+        if self.idx_srt_rule_name != self.srt_rule.__name__:
+            warn(f"""Your sort key name ({self.srt_rule.__name__}) doesn't
+                 match the index sort key name ({self.idx_srt_rule_name})""")
 
     def read_mem_idx(self):
+        idx_srt_rule_name = self.mem_idx_opened.readline().rstrip().split('=')[1]
         unidx_lines_quan = int(self.mem_idx_opened.readline().rstrip().split('=')[1])
         mem_idx_your_vals, full_idx_lstarts = [], []
         for mem_idx_line in self.mem_idx_opened:
             mem_idx_row = mem_idx_line.rstrip().split(',')
             mem_idx_your_vals.append(mem_idx_row[0])
             full_idx_lstarts.append(int(mem_idx_row[1]))
-        return unidx_lines_quan, mem_idx_your_vals, full_idx_lstarts
+        return (idx_srt_rule_name, unidx_lines_quan,
+                mem_idx_your_vals, full_idx_lstarts)
 
-    def prs(self, your_vals):
+    def prs(self,
+            your_vals: list | tuple | set | dict | str | int | float | Decimal) -> str:
         if type(your_vals) in [str,
                                int,
                                float,
