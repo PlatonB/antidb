@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "antidb"
-version = "2023.8.20"
+version = "2023.9.29"
 authors = [
     { name="Platon Bykadorov", email="platon.work@gmail.com" },
 ]
@@ -27,7 +27,6 @@ keywords = [
     "indexer",
     "zstd",
     "zstandard",
-    "vigg",
     "seekable",
     "pyzstd",
 ]
