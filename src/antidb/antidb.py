@@ -16,7 +16,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v2.2.1'
+__version__ = 'v2.3.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -25,8 +25,9 @@ __authors__ = [{'name': 'Platon Bykadorov',
 def count_exec_time(any_func: Callable) -> Callable:
     def wrapper(*args: Any, **kwargs: Any):
         exec_time_start = datetime.now()
-        any_func(*args, **kwargs)
+        any_func_res = any_func(*args, **kwargs)
         return (any_func.__name__,
+                any_func_res,
                 str(datetime.now() -
                     exec_time_start))
     return wrapper

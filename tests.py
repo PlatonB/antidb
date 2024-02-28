@@ -13,7 +13,7 @@ from src.antidb.antidb import (Idx,
 from src.antidb.antisrt import (SrtRules,
                                 Srt)
 
-__version__ = 'v2.6.0'
+__version__ = 'v2.7.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -60,6 +60,25 @@ class AntidbTests(unittest.TestCase):
                      json.loads(mt_zst_line)['refsnp_id'])
         remove_old_files(mt_idx)
         mt_idx.idx()
+        self.assertIsInstance(mt_idx.perf,
+                              list)
+        self.assertEqual(len(mt_idx.perf),
+                         5)
+        self.assertEqual(mt_idx.perf[0][0:2],
+                         ('crt_db_zst',
+                          None))
+        self.assertEqual(mt_idx.perf[1][0:2],
+                         ('crt_full_idx_tmp',
+                          None))
+        self.assertEqual(mt_idx.perf[2][0:2],
+                         ('crt_full_idx_tmp_srtd',
+                          None))
+        self.assertEqual(mt_idx.perf[3][0:2],
+                         ('crt_full_idx',
+                          None))
+        self.assertEqual(mt_idx.perf[4][0:2],
+                         ('crt_mem_idx',
+                          None))
         with pyzstd.open(mt_idx.full_idx_path,
                          mode='rt') as full_idx_opened:
             full_idx_lines_cnt = 0
