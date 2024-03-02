@@ -16,7 +16,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v2.3.0'
+__version__ = 'v2.4.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -97,18 +97,30 @@ class Idx(SrtRules, Srt):
         if not os.path.exists(self.mem_idx_path):
             self.perf.append(self.crt_mem_idx())
 
+    @staticmethod
+    def compr_text_file(src_text_path,
+                        trg_zst_path,
+                        compr_settings,
+                        compr_frame_size,
+                        compr_chunk_size):
+        with open(src_text_path) as src_text_opened:
+            with TextIOWrapper(SeekableZstdFile(trg_zst_path,
+                                                mode='w',
+                                                level_or_option=compr_settings,
+                                                max_frame_content_size=compr_frame_size)) as trg_zst_opened:
+                while True:
+                    src_text_chunk = src_text_opened.read(compr_chunk_size)
+                    if not src_text_chunk:
+                        break
+                    trg_zst_opened.write(src_text_chunk)
+
     @count_exec_time
     def crt_db_zst(self):
-        with open(self.db_file_path) as src_txt_opened:
-            with TextIOWrapper(SeekableZstdFile(self.db_zst_path,
-                                                mode='w',
-                                                level_or_option=self.compr_settings,
-                                                max_frame_content_size=self.compr_frame_size)) as db_zst_opened:
-                while True:
-                    src_txt_chunk = src_txt_opened.read(self.compr_chunk_size)
-                    if not src_txt_chunk:
-                        break
-                    db_zst_opened.write(src_txt_chunk)
+        self.compr_text_file(self.db_file_path,
+                             self.db_zst_path,
+                             self.compr_settings,
+                             self.compr_frame_size,
+                             self.compr_chunk_size)
 
     @count_exec_time
     def crt_full_idx_tmp(self):
@@ -151,16 +163,11 @@ class Idx(SrtRules, Srt):
 
     @count_exec_time
     def crt_full_idx(self):
-        with open(self.full_idx_tmp_srtd_path) as full_idx_tmp_srtd_opened:
-            with TextIOWrapper(SeekableZstdFile(self.full_idx_path,
-                                                mode='w',
-                                                level_or_option=self.compr_settings,
-                                                max_frame_content_size=self.compr_frame_size)) as full_idx_opened:
-                while True:
-                    full_idx_tmp_srtd_chunk = full_idx_tmp_srtd_opened.read(self.compr_chunk_size)
-                    if not full_idx_tmp_srtd_chunk:
-                        break
-                    full_idx_opened.write(full_idx_tmp_srtd_chunk)
+        self.compr_text_file(self.full_idx_tmp_srtd_path,
+                             self.full_idx_path,
+                             self.compr_settings,
+                             self.compr_frame_size,
+                             self.compr_chunk_size)
 
     @count_exec_time
     def crt_mem_idx(self):
