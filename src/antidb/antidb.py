@@ -16,7 +16,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v2.4.0'
+__version__ = 'v2.4.1'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -198,7 +198,7 @@ class Prs(Idx):
                  **srt_rule_kwargs: Any):
         super().__init__(db_file_path,
                          idx_prefix,
-                         None,
+                         your_line_parser=None,
                          srt_rule=srt_rule,
                          **srt_rule_kwargs)
         if not os.path.exists(self.db_zst_path):

@@ -13,7 +13,7 @@ from src.antidb.antidb import (Idx,
 from src.antidb.antisrt import (SrtRules,
                                 Srt)
 
-__version__ = 'v2.7.0'
+__version__ = 'v2.8.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -58,6 +58,9 @@ class AntidbTests(unittest.TestCase):
                      'rsids',
                      lambda mt_zst_line:
                      json.loads(mt_zst_line)['refsnp_id'])
+        self.assertEqual(mt_idx.srt_rule.__name__,
+                         'natur')
+        self.assertFalse(mt_idx.perf)
         remove_old_files(mt_idx)
         mt_idx.idx()
         self.assertIsInstance(mt_idx.perf,
@@ -93,6 +96,8 @@ class AntidbTests(unittest.TestCase):
             self.assertEqual(mem_idx_lines_cnt, 10)
         mt_prs = Prs(self.mt_json_path,
                      'rsids')
+        self.assertEqual(mt_prs.idx_srt_rule_name,
+                         'natur')
         mt_prs_res = []
         for mt_zst_line in mt_prs.prs(['2124599696',
                                        8936,
@@ -124,8 +129,11 @@ class AntidbTests(unittest.TestCase):
                      compr_chunk_elems_quan=10,
                      unidx_lines_quan=10,
                      srt_rule=alpha_srt_rule)
+        self.assertEqual(mt_idx.your_line_parser.__name__,
+                         'parse_mt_line')
+        self.assertEqual(mt_idx.srt_rule.__name__,
+                         'alpha_srt_rule')
         remove_old_files(mt_idx)
-
         mt_idx.idx()
         with pyzstd.open(mt_idx.mem_idx_path,
                          mode='rt') as mem_idx_opened:
@@ -138,6 +146,8 @@ class AntidbTests(unittest.TestCase):
         mt_prs = Prs(self.mt_json_path,
                      'rsids',
                      srt_rule=alpha_srt_rule)
+        self.assertEqual(mt_prs.srt_rule.__name__,
+                         'alpha_srt_rule')
         with pyzstd.open(mt_prs.db_zst_path,
                          mode='rt') as mt_zst_opened:
             mt_zst_rsids = [json.loads(mt_zst_line)['refsnp_id']
@@ -176,8 +186,11 @@ class AntidbTests(unittest.TestCase):
         mt_cln_idx = Idx(self.mt_json_path,
                          'rsids_cln',
                          parse_mt_cln_line)
+        self.assertEqual(mt_cln_idx.your_line_parser.__name__,
+                         'parse_mt_cln_line')
+        self.assertEqual(mt_cln_idx.srt_rule.__name__,
+                         'natur')
         remove_old_files(mt_cln_idx)
-
         mt_cln_idx.idx()
         with pyzstd.open(mt_cln_idx.full_idx_path,
                          mode='rt') as full_idx_opened:
@@ -193,6 +206,8 @@ class AntidbTests(unittest.TestCase):
             self.assertEqual(mem_idx_lines_cnt, 3)
         mt_cln_prs = Prs(self.mt_json_path,
                          'rsids_cln')
+        self.assertEqual(mt_cln_prs.srt_rule.__name__,
+                         'natur')
         mt_cln_prs_res = []
         for mt_zst_line in mt_cln_prs.prs(['qwerty',
                                            '2001030',
