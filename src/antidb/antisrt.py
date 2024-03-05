@@ -5,40 +5,65 @@ from typing import (Callable,
 from heapq import merge
 from functools import partial
 
-__version__ = 'v1.1.1'
+__version__ = 'v2.0.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
 
 
+class DelimitersMatchError(Exception):
+    def __init__(self,
+                 cols_delimiter,
+                 dec_delimiter):
+        err_msg = f'''\nColums delimiter ({cols_delimiter})
+matches decimal delimiter ({dec_delimiter})'''
+        super().__init__(err_msg)
+
+
 class SrtRules():
     @staticmethod
     def natur(src_file_line: str,
-              delimiter: str = '\t',
-              src_file_colinds: None | int | list | tuple = None) -> list:
-        src_file_row = src_file_line.rstrip().split(delimiter)
-        if type(src_file_colinds) is int:
-            src_file_row = [src_file_row[src_file_colinds]]
-        elif type(src_file_colinds) in [list, tuple]:
-            src_file_row = [src_file_row[src_file_colind]
-                            for src_file_colind in src_file_colinds]
+              cols_delimiter: str = '\t',
+              dec_delimiter: str = '.',
+              col_inds: None | int | list | tuple = None,
+              nums_first: bool = True) -> list:
+        if cols_delimiter == dec_delimiter:
+            raise DelimitersMatchError(cols_delimiter,
+                                       dec_delimiter)
+        src_file_row = src_file_line.rstrip().split(cols_delimiter)
+        if type(col_inds) is int:
+            src_file_row = [src_file_row[col_inds]]
+        elif type(col_inds) in [list, tuple]:
+            src_file_row = [src_file_row[col_ind]
+                            for col_ind in col_inds]
+        if dec_delimiter == '.':
+            split_cell = r'(-?\d+(?:\.\d*)?(?:[Ee][+-]?\d*)?)'
+        elif dec_delimiter == ',':
+            split_cell = r'(-?\d+(?:,\d*)?(?:[Ee][+-]?\d*)?)'
         spl_file_row = []
-        for src_file_cell in src_file_row:
-            src_file_subcells = list(filter(lambda src_file_subcell:
-                                            src_file_subcell,
-                                            re.split(r'(\d+\.?\d*)',
-                                                     src_file_cell)))
-            for src_file_subcell_ind in range(len(src_file_subcells)):
+        for cell in src_file_row:
+            subcells = list(filter(lambda subcell:
+                                   subcell,
+                                   re.split(split_cell,
+                                            cell)))
+            for subcell_ind in range(len(subcells)):
                 try:
-                    src_file_subcells[src_file_subcell_ind] = int(src_file_subcells[src_file_subcell_ind])
+                    subcells[subcell_ind] = int(subcells[subcell_ind])
                 except ValueError:
                     try:
-                        src_file_subcells[src_file_subcell_ind] = float(src_file_subcells[src_file_subcell_ind])
+                        subcells[subcell_ind] = float(subcells[subcell_ind])
                     except ValueError:
-                        pass
-            if type(src_file_subcells[0]) is str:
-                src_file_subcells.insert(0, float('+inf'))
-            spl_file_row.append(src_file_subcells)
+                        if dec_delimiter == ',':
+                            try:
+                                subcells[subcell_ind] = float(subcells[subcell_ind].replace(',', '.'))
+                            except ValueError:
+                                pass
+            if type(subcells[0]) is str:
+                if nums_first:
+                    subcells.insert(0, float('+inf'))
+                else:
+                    subcells.insert(0, float('-inf'))
+            spl_file_row.append(subcells)
         return spl_file_row
 
 

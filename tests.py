@@ -10,10 +10,11 @@ from random import shuffle
 import pyzstd
 from src.antidb.antidb import (Idx,
                                Prs)
-from src.antidb.antisrt import (SrtRules,
+from src.antidb.antisrt import (DelimitersMatchError,
+                                SrtRules,
                                 Srt)
 
-__version__ = 'v2.8.0'
+__version__ = 'v2.9.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -251,24 +252,47 @@ class SrtRulesTests(unittest.TestCase):
         self.assertEqual(self.srt_rules.natur('rs10\t11'),
                          [[float('+inf'), 'rs', 10], [11]])
         self.assertEqual(self.srt_rules.natur('10,11.1',
-                                              delimiter=','),
+                                              cols_delimiter=','),
                          [[10], [11.1]])
         self.assertEqual(self.srt_rules.natur('10.1,11',
-                                              delimiter=',',
-                                              src_file_colinds=None),
+                                              cols_delimiter=',',
+                                              col_inds=None),
                          [[10.1], [11]])
         self.assertEqual(self.srt_rules.natur('10,11.1',
-                                              delimiter=',',
-                                              src_file_colinds=1),
+                                              cols_delimiter=',',
+                                              col_inds=1),
                          [[11.1]])
         self.assertEqual(self.srt_rules.natur('10.1,11',
-                                              delimiter=',',
-                                              src_file_colinds=[1, 0]),
+                                              cols_delimiter=',',
+                                              col_inds=[1, 0]),
                          [[11], [10.1]])
         self.assertEqual(self.srt_rules.natur('10,11.1',
-                                              delimiter='\t',
-                                              src_file_colinds=[0]),
+                                              cols_delimiter='\t',
+                                              col_inds=[0]),
                          [[10, ',', 11.1]])
+        self.assertEqual(self.srt_rules.natur('10.1,11',
+                                              cols_delimiter='\t',
+                                              dec_delimiter=','),
+                         [[10, '.', 1.11]])
+        self.assertEqual(self.srt_rules.natur('123E-3'),
+                         [[0.123]])
+        self.assertEqual(self.srt_rules.natur('123e-02'),
+                         [[1.23]])
+        self.assertEqual(self.srt_rules.natur('qwerty\t0.1E2'),
+                         [[float('+inf'), 'qwerty'], [10.0]])
+        self.assertEqual(self.srt_rules.natur('0,1e+2\tqwerty',
+                                              dec_delimiter=','),
+                         [[10.0], [float('+inf'), 'qwerty']])
+        self.assertEqual(self.srt_rules.natur('1,1, -2,2, str',
+                                              cols_delimiter=', ',
+                                              dec_delimiter=',',
+                                              nums_first=False),
+                         [[1.1], [-2.2], [float('-inf'), 'str']])
+        self.assertRaises(DelimitersMatchError,
+                          self.srt_rules.natur,
+                          '111,111',
+                          cols_delimiter=',',
+                          dec_delimiter=',')
 
 
 class SrtTests(unittest.TestCase):
@@ -301,8 +325,8 @@ class SrtTests(unittest.TestCase):
                          432604)
         srt = Srt(self.trf_bed_path,
                   SrtRules().natur,
-                  delimiter='\t',
-                  src_file_colinds=5)
+                  cols_delimiter='\t',
+                  col_inds=5)
         srt.pre_srt(chunk_elems_quan=float('+inf'))
         nat_presrtd_trf_path = f'{self.trf_bed_path}.1'
         self.assertTrue(os.path.exists(nat_presrtd_trf_path))
@@ -407,8 +431,8 @@ class SrtTests(unittest.TestCase):
                          432604)
         srt = Srt(self.trf_bed_path,
                   SrtRules().natur,
-                  delimiter='\t',
-                  src_file_colinds=[15, 14])
+                  cols_delimiter='\t',
+                  col_inds=[15, 14])
         srt.pre_srt(chunk_elems_quan=108150)
         self.assertEqual(len(srt.presrtd_file_paths),
                          5)
