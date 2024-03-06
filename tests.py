@@ -14,7 +14,7 @@ from src.antidb.antisrt import (DelimitersMatchError,
                                 SrtRules,
                                 Srt)
 
-__version__ = 'v2.9.1'
+__version__ = 'v2.9.2'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -94,7 +94,7 @@ class AntidbTests(unittest.TestCase):
             mem_idx_lines_cnt = 0
             for mem_idx_line in mem_idx_opened:
                 mem_idx_lines_cnt += 1
-            self.assertEqual(mem_idx_lines_cnt, 10)
+            self.assertEqual(mem_idx_lines_cnt, 11)
         mt_prs = Prs(self.mt_json_path,
                      'rsids')
         self.assertEqual(mt_prs.idx_srt_rule_name,
@@ -139,9 +139,12 @@ class AntidbTests(unittest.TestCase):
         with pyzstd.open(mt_idx.mem_idx_path,
                          mode='rt') as mem_idx_opened:
             idx_srt_rule_name = mem_idx_opened.readline().rstrip().split('=')[1]
+            idx_srt_rule_kwargs = eval(mem_idx_opened.readline().rstrip().split('=')[1])
             unidx_lines_quan = int(mem_idx_opened.readline().rstrip().split('=')[1])
             self.assertEqual(idx_srt_rule_name,
                              'alpha_srt_rule')
+            self.assertEqual(idx_srt_rule_kwargs,
+                             {})
             self.assertEqual(unidx_lines_quan,
                              10)
         mt_prs = Prs(self.mt_json_path,
@@ -204,7 +207,7 @@ class AntidbTests(unittest.TestCase):
             mem_idx_lines_cnt = 0
             for mem_idx_line in mem_idx_opened:
                 mem_idx_lines_cnt += 1
-            self.assertEqual(mem_idx_lines_cnt, 3)
+            self.assertEqual(mem_idx_lines_cnt, 4)
         mt_cln_prs = Prs(self.mt_json_path,
                          'rsids_cln')
         self.assertEqual(mt_cln_prs.srt_rule.__name__,

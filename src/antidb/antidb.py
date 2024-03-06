@@ -16,7 +16,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v2.4.1'
+__version__ = 'v2.5.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -177,6 +177,7 @@ class Idx(SrtRules, Srt):
                                         mode='w',
                                         level_or_option=self.compr_settings)) as mem_idx_opened:
                 mem_idx_opened.write(f'idx_srt_rule_name={self.srt_rule.__name__}\n')
+                mem_idx_opened.write(f'idx_srt_rule_kwargs={self.srt_rule_kwargs}\n')
                 mem_idx_opened.write(f'unidx_lines_quan={self.unidx_lines_quan}\n')
                 while True:
                     full_idx_lstart = full_idx_opened.tell()
@@ -216,20 +217,26 @@ class Prs(Idx):
         else:
             self.mem_idx_opened = TextIOWrapper(ZstdFile(self.mem_idx_path,
                                                          mode='r'))
-        self.idx_srt_rule_name, self.unidx_lines_quan, self.mem_idx_your_vals, self.full_idx_lstarts = self.read_mem_idx()
+        mem_idx = self.read_mem_idx()
+        self.idx_srt_rule_name, self.idx_srt_rule_kwargs, self.unidx_lines_quan = mem_idx[:3]
+        self.mem_idx_your_vals, self.full_idx_lstarts = mem_idx[3:]
         if self.idx_srt_rule_name != self.srt_rule.__name__:
             warn(f"""Your sort key name ({self.srt_rule.__name__}) doesn't
                  match the index sort key name ({self.idx_srt_rule_name})""")
+        if self.idx_srt_rule_kwargs != self.srt_rule_kwargs:
+            warn(f"""Your sort key arguments ({self.srt_rule_kwargs}) don't
+                 match the index sort key arguments ({self.idx_srt_rule_kwargs})""")
 
     def read_mem_idx(self):
         idx_srt_rule_name = self.mem_idx_opened.readline().rstrip().split('=')[1]
+        idx_srt_rule_kwargs = eval(self.mem_idx_opened.readline().rstrip().split('=')[1])
         unidx_lines_quan = int(self.mem_idx_opened.readline().rstrip().split('=')[1])
         mem_idx_your_vals, full_idx_lstarts = [], []
         for mem_idx_line in self.mem_idx_opened:
             mem_idx_row = mem_idx_line.rstrip().split(',')
             mem_idx_your_vals.append(mem_idx_row[0])
             full_idx_lstarts.append(int(mem_idx_row[1]))
-        return (idx_srt_rule_name, unidx_lines_quan,
+        return (idx_srt_rule_name, idx_srt_rule_kwargs, unidx_lines_quan,
                 mem_idx_your_vals, full_idx_lstarts)
 
     def prs(self,
