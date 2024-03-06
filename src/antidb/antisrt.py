@@ -5,7 +5,7 @@ from typing import (Callable,
 from heapq import merge
 from functools import partial
 
-__version__ = 'v2.0.0'
+__version__ = 'v2.0.1'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -37,9 +37,9 @@ class SrtRules():
             src_file_row = [src_file_row[col_ind]
                             for col_ind in col_inds]
         if dec_delimiter == '.':
-            split_cell = r'(-?\d+(?:\.\d*)?(?:[Ee][+-]?\d*)?)'
+            split_cell = r'(-?\d+(?:\.\d*)?(?:[Ee][+-]?\d+)?)'
         elif dec_delimiter == ',':
-            split_cell = r'(-?\d+(?:,\d*)?(?:[Ee][+-]?\d*)?)'
+            split_cell = r'(-?\d+(?:,\d*)?(?:[Ee][+-]?\d+)?)'
         spl_file_row = []
         for cell in src_file_row:
             subcells = list(filter(lambda subcell:

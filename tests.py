@@ -14,7 +14,7 @@ from src.antidb.antisrt import (DelimitersMatchError,
                                 SrtRules,
                                 Srt)
 
-__version__ = 'v2.9.0'
+__version__ = 'v2.9.1'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -278,6 +278,14 @@ class SrtRulesTests(unittest.TestCase):
                          [[0.123]])
         self.assertEqual(self.srt_rules.natur('123e-02'),
                          [[1.23]])
+        self.assertEqual(self.srt_rules.natur('pref1.23e2suff'),
+                         [[float('+inf'), 'pref', 123.0, 'suff']])
+        self.assertEqual(self.srt_rules.natur('e1.23e-1e'),
+                         [[float('+inf'), 'e', 0.123, 'e']])
+        self.assertEqual(self.srt_rules.natur('-E1.23E+1-E'),
+                         [[float('+inf'), '-E', 12.3, '-E']])
+        self.assertEqual(self.srt_rules.natur('-e1.23e-1-e'),
+                         [[float('+inf'), '-e', 0.123, '-e']])
         self.assertEqual(self.srt_rules.natur('qwerty\t0.1E2'),
                          [[float('+inf'), 'qwerty'], [10.0]])
         self.assertEqual(self.srt_rules.natur('0,1e+2\tqwerty',
