@@ -14,10 +14,10 @@ from src.antidb.antisrt import (DelimitersMatchError,
                                 SrtRules,
                                 Srt)
 
-__version__ = 'v2.9.2'
+__version__ = 'v2.10.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
-                'years': '2023'}]
+                'years': '2023-2024'}]
 
 
 def remove_old_files(idx_obj):
@@ -277,6 +277,18 @@ class SrtRulesTests(unittest.TestCase):
                                               cols_delimiter='\t',
                                               dec_delimiter=','),
                          [[10, '.', 1.11]])
+        self.assertEqual(self.srt_rules.natur('+'),
+                         [[float('+inf'), '+']])
+        self.assertEqual(self.srt_rules.natur('-'),
+                         [[float('+inf'), '-']])
+        self.assertEqual(self.srt_rules.natur('1+1'),
+                         [[1, '+', 1]])
+        self.assertEqual(self.srt_rules.natur('-1-1'),
+                         [[-1, -1]])
+        self.assertEqual(self.srt_rules.natur('+001-001'),
+                         [[float('+inf'), '+', 1, -1]])
+        self.assertEqual(self.srt_rules.natur('-1.23e'),
+                         [[-1.23, 'e']])
         self.assertEqual(self.srt_rules.natur('123E-3'),
                          [[0.123]])
         self.assertEqual(self.srt_rules.natur('123e-02'),
@@ -285,10 +297,18 @@ class SrtRulesTests(unittest.TestCase):
                          [[float('+inf'), 'pref', 123.0, 'suff']])
         self.assertEqual(self.srt_rules.natur('e1.23e-1e'),
                          [[float('+inf'), 'e', 0.123, 'e']])
-        self.assertEqual(self.srt_rules.natur('-E1.23E+1-E'),
+        self.assertEqual(self.srt_rules.natur('-E1.23E+01-E'),
                          [[float('+inf'), '-E', 12.3, '-E']])
-        self.assertEqual(self.srt_rules.natur('-e1.23e-1-e'),
-                         [[float('+inf'), '-e', 0.123, '-e']])
+        self.assertEqual(self.srt_rules.natur('-e-1.23e-1-e'),
+                         [[float('+inf'), '-e', -0.123, '-e']])
+        self.assertEqual(self.srt_rules.natur('+1230E-1+1'),
+                         [[float('+inf'), '+', 123.0, '+', 1]])
+        self.assertEqual(self.srt_rules.natur('0.123ee+2'),
+                         [[0.123, 'ee+', 2]])
+        self.assertEqual(self.srt_rules.natur('-12.3+EE-02'),
+                         [[-12.3, '+EE', -2]])
+        self.assertEqual(self.srt_rules.natur('-0e10'),
+                         [[0]])
         self.assertEqual(self.srt_rules.natur('qwerty\t0.1E2'),
                          [[float('+inf'), 'qwerty'], [10.0]])
         self.assertEqual(self.srt_rules.natur('0,1e+2\tqwerty',
