@@ -16,7 +16,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v2.5.0'
+__version__ = 'v2.6.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -39,7 +39,7 @@ class FileNotFoundError(Exception):
         super().__init__(err_msg)
 
 
-class Idx(SrtRules, Srt):
+class Idx(Srt):
     def __init__(self,
                  db_file_path: str,
                  idx_prefix: str,
@@ -66,18 +66,10 @@ class Idx(SrtRules, Srt):
         self.compr_frame_size = compr_frame_size
         self.compr_chunk_size = compr_chunk_size
         self.compr_chunk_elems_quan = compr_chunk_elems_quan
-        if srt_rule:
-            self.srt_rule = srt_rule
-        else:
-            self.srt_rule = self.natur
-        if srt_rule_kwargs:
-            self.srt_rule_kwargs = srt_rule_kwargs
-        else:
-            self.srt_rule_kwargs = {}
-        super().__init__(unsrtd_file_path=self.full_idx_tmp_path,
-                         srt_rule=self.srt_rule,
-                         **self.srt_rule_kwargs)
         self.unidx_lines_quan = unidx_lines_quan
+        super().__init__(unsrtd_file_path=self.full_idx_tmp_path,
+                         srt_rule=srt_rule,
+                         **srt_rule_kwargs)
         self.perf = []
 
     def idx(self):

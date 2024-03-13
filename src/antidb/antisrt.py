@@ -2,10 +2,11 @@ import re
 import os
 from typing import (Callable,
                     Any)
+from inspect import stack
 from heapq import merge
 from functools import partial
 
-__version__ = 'v2.0.1'
+__version__ = 'v2.1.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023'}]
@@ -17,6 +18,14 @@ class DelimitersMatchError(Exception):
                  dec_delimiter):
         err_msg = f'''\nColums delimiter ({cols_delimiter})
 matches decimal delimiter ({dec_delimiter})'''
+        super().__init__(err_msg)
+
+
+class NoSrcFilesError(Exception):
+    def __init__(self,
+                 func_name):
+        err_msg = f'''\nThere are no source file(s)
+for {func_name} function/method'''
         super().__init__(err_msg)
 
 
@@ -67,18 +76,24 @@ class SrtRules():
         return spl_file_row
 
 
-class Srt():
+class Srt(SrtRules):
     def __init__(self,
-                 unsrtd_file_path: str,
-                 srt_rule: Callable,
+                 unsrtd_file_path: None | str = None,
                  presrtd_file_paths: None | list = None,
+                 srt_rule: None | Callable = None,
                  **srt_rule_kwargs: Any):
-        self.unsrtd_file_path = os.path.normpath(unsrtd_file_path)
+        if unsrtd_file_path:
+            self.unsrtd_file_path = os.path.normpath(unsrtd_file_path)
+        else:
+            self.unsrtd_file_path = None
         if presrtd_file_paths:
             self.presrtd_file_paths = presrtd_file_paths
         else:
             self.presrtd_file_paths = []
-        self.srt_rule = srt_rule
+        if srt_rule:
+            self.srt_rule = srt_rule
+        else:
+            self.srt_rule = self.natur
         if srt_rule_kwargs:
             self.srt_rule_kwargs = srt_rule_kwargs
         else:
@@ -92,6 +107,9 @@ class Srt():
 
     def pre_srt(self,
                 chunk_elems_quan: int = 10000000):
+        if not self.unsrtd_file_path:
+            raise NoSrcFilesError(stack()[0].function)
+        self.presrtd_file_paths = []
         with open(self.unsrtd_file_path) as src_file_opened:
             while True:
                 src_file_lstart = src_file_opened.tell()
@@ -126,7 +144,7 @@ class Srt():
                 mrgd_file_suff: str = 'srtd',
                 del_presrtd_files: bool = True) -> None | str:
         if not self.presrtd_file_paths:
-            return None
+            raise NoSrcFilesError(stack()[0].function)
         presrtd_file_common_path = re.sub(r'\.\d+$',
                                           '',
                                           self.presrtd_file_paths[0])

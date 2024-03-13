@@ -14,7 +14,7 @@ from src.antidb.antisrt import (DelimitersMatchError,
                                 SrtRules,
                                 Srt)
 
-__version__ = 'v2.10.0'
+__version__ = 'v2.10.1'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023-2024'}]
@@ -358,6 +358,11 @@ class SrtTests(unittest.TestCase):
                   SrtRules().natur,
                   cols_delimiter='\t',
                   col_inds=5)
+        self.assertEqual(srt.srt_rule.__name__,
+                         'natur')
+        self.assertEqual(srt.srt_rule_kwargs,
+                         {'cols_delimiter': '\t',
+                          'col_inds': 5})
         srt.pre_srt(chunk_elems_quan=float('+inf'))
         nat_presrtd_trf_path = f'{self.trf_bed_path}.1'
         self.assertTrue(os.path.exists(nat_presrtd_trf_path))
@@ -461,9 +466,14 @@ class SrtTests(unittest.TestCase):
         self.assertEqual(str_float_gnusrtd_lines_quan,
                          432604)
         srt = Srt(self.trf_bed_path,
-                  SrtRules().natur,
+                  srt_rule=None,
                   cols_delimiter='\t',
                   col_inds=[15, 14])
+        self.assertEqual(srt.srt_rule.__name__,
+                         'natur')
+        self.assertEqual(srt.srt_rule_kwargs,
+                         {'cols_delimiter': '\t',
+                          'col_inds': [15, 14]})
         srt.pre_srt(chunk_elems_quan=108150)
         self.assertEqual(len(srt.presrtd_file_paths),
                          5)
