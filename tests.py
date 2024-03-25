@@ -14,7 +14,7 @@ from src.antidb.antisrt import (DelimitersMatchError,
                                 SrtRules,
                                 Srt)
 
-__version__ = 'v2.10.1'
+__version__ = 'v2.11.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023-2024'}]
@@ -324,6 +324,33 @@ class SrtRulesTests(unittest.TestCase):
                           '111,111',
                           cols_delimiter=',',
                           dec_delimiter=',')
+
+    def test_letts_nums_srt_rule(self):
+        self.assertEqual(self.srt_rules.letts_nums('rs1'),
+                         [['rs', 1]])
+        self.assertEqual(self.srt_rules.letts_nums('rs010'),
+                         [['rs', 10]])
+        self.assertEqual(self.srt_rules.letts_nums('ENSG000\trs000',
+                                                   col_inds=0),
+                         [['ENSG', 0]])
+        self.assertEqual(self.srt_rules.letts_nums('ENSG000\trs000',
+                                                   col_inds=[1, 0]),
+                         [['rs', 0], ['ENSG', 0]])
+        self.assertRaises(AttributeError,
+                          self.srt_rules.letts_nums,
+                          'rs')
+        self.assertRaises(AttributeError,
+                          self.srt_rules.letts_nums,
+                          '1dvatri')
+        self.assertRaises(AttributeError,
+                          self.srt_rules.letts_nums,
+                          '123')
+        self.assertRaises(AttributeError,
+                          self.srt_rules.letts_nums,
+                          'id1.1')
+        self.assertRaises(AttributeError,
+                          self.srt_rules.letts_nums,
+                          'id-1')
 
 
 class SrtTests(unittest.TestCase):

@@ -6,10 +6,10 @@ from inspect import stack
 from heapq import merge
 from functools import partial
 
-__version__ = 'v2.1.0'
+__version__ = 'v2.2.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
-                'years': '2023'}]
+                'years': '2023-2024'}]
 
 
 class DelimitersMatchError(Exception):
@@ -31,6 +31,18 @@ for {func_name} function/method'''
 
 class SrtRules():
     @staticmethod
+    def get_cols(src_file_line: str,
+                 cols_delimiter: str = '\t',
+                 col_inds: None | int | list | tuple = None):
+        src_file_row = src_file_line.rstrip().split(cols_delimiter)
+        if type(col_inds) is int:
+            src_file_row = [src_file_row[col_inds]]
+        elif type(col_inds) in [list, tuple]:
+            src_file_row = [src_file_row[col_ind]
+                            for col_ind in col_inds]
+        return src_file_row
+
+    @staticmethod
     def natur(src_file_line: str,
               cols_delimiter: str = '\t',
               dec_delimiter: str = '.',
@@ -39,21 +51,18 @@ class SrtRules():
         if cols_delimiter == dec_delimiter:
             raise DelimitersMatchError(cols_delimiter,
                                        dec_delimiter)
-        src_file_row = src_file_line.rstrip().split(cols_delimiter)
-        if type(col_inds) is int:
-            src_file_row = [src_file_row[col_inds]]
-        elif type(col_inds) in [list, tuple]:
-            src_file_row = [src_file_row[col_ind]
-                            for col_ind in col_inds]
+        src_file_row = SrtRules.get_cols(src_file_line,
+                                         cols_delimiter,
+                                         col_inds)
         if dec_delimiter == '.':
-            split_cell = r'(-?\d+(?:\.\d*)?(?:[Ee][+-]?\d+)?)'
+            natur_split_cell = r'(-?\d+(?:\.\d*)?(?:[Ee][+-]?\d+)?)'
         elif dec_delimiter == ',':
-            split_cell = r'(-?\d+(?:,\d*)?(?:[Ee][+-]?\d+)?)'
+            natur_split_cell = r'(-?\d+(?:,\d*)?(?:[Ee][+-]?\d+)?)'
         spl_file_row = []
         for cell in src_file_row:
             subcells = list(filter(lambda subcell:
                                    subcell,
-                                   re.split(split_cell,
+                                   re.split(natur_split_cell,
                                             cell)))
             for subcell_ind in range(len(subcells)):
                 try:
@@ -73,6 +82,23 @@ class SrtRules():
                 else:
                     subcells.insert(0, float('-inf'))
             spl_file_row.append(subcells)
+        return spl_file_row
+
+    @staticmethod
+    def letts_nums(src_file_line: str,
+                   cols_delimiter: str = '\t',
+                   col_inds: None | int | list | tuple = None) -> list:
+        src_file_row = SrtRules.get_cols(src_file_line,
+                                         cols_delimiter,
+                                         col_inds)
+        spl_file_row = []
+        for cell in src_file_row:
+            letts = re.search(r'^[a-zA-Z]+',
+                              cell).group()
+            nums = int(re.search(f'(?<=^{letts})\d+$',
+                                 cell).group())
+            spl_file_row.append([letts,
+                                 nums])
         return spl_file_row
 
 
