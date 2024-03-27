@@ -6,7 +6,7 @@ from inspect import stack
 from heapq import merge
 from functools import partial
 
-__version__ = 'v2.2.0'
+__version__ = 'v3.0.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023-2024'}]
@@ -30,30 +30,33 @@ for {func_name} function/method'''
 
 
 class SrtRules():
-    @staticmethod
-    def get_cols(src_file_line: str,
-                 cols_delimiter: str = '\t',
+    def __init__(self,
+                 cols_delimiter: str | None = '\t',
                  col_inds: None | int | list | tuple = None):
-        src_file_row = src_file_line.rstrip().split(cols_delimiter)
-        if type(col_inds) is int:
-            src_file_row = [src_file_row[col_inds]]
-        elif type(col_inds) in [list, tuple]:
+        self.cols_delimiter = cols_delimiter
+        self.col_inds = col_inds
+
+    def get_cols(self,
+                 src_file_line: str):
+        if self.cols_delimiter:
+            src_file_row = src_file_line.rstrip().split(self.cols_delimiter)
+        else:
+            src_file_row = [src_file_line.rstrip()]
+        if type(self.col_inds) is int:
+            src_file_row = [src_file_row[self.col_inds]]
+        elif type(self.col_inds) in [list, tuple]:
             src_file_row = [src_file_row[col_ind]
-                            for col_ind in col_inds]
+                            for col_ind in self.col_inds]
         return src_file_row
 
-    @staticmethod
-    def natur(src_file_line: str,
-              cols_delimiter: str = '\t',
+    def natur(self,
+              src_file_line: str,
               dec_delimiter: str = '.',
-              col_inds: None | int | list | tuple = None,
               nums_first: bool = True) -> list:
-        if cols_delimiter == dec_delimiter:
-            raise DelimitersMatchError(cols_delimiter,
+        if self.cols_delimiter == dec_delimiter:
+            raise DelimitersMatchError(self.cols_delimiter,
                                        dec_delimiter)
-        src_file_row = SrtRules.get_cols(src_file_line,
-                                         cols_delimiter,
-                                         col_inds)
+        src_file_row = self.get_cols(src_file_line)
         if dec_delimiter == '.':
             natur_split_cell = r'(-?\d+(?:\.\d*)?(?:[Ee][+-]?\d+)?)'
         elif dec_delimiter == ',':
@@ -84,13 +87,9 @@ class SrtRules():
             spl_file_row.append(subcells)
         return spl_file_row
 
-    @staticmethod
-    def letts_nums(src_file_line: str,
-                   cols_delimiter: str = '\t',
-                   col_inds: None | int | list | tuple = None) -> list:
-        src_file_row = SrtRules.get_cols(src_file_line,
-                                         cols_delimiter,
-                                         col_inds)
+    def letts_nums(self,
+                   src_file_line: str) -> list:
+        src_file_row = self.get_cols(src_file_line)
         spl_file_row = []
         for cell in src_file_row:
             letts = re.search(r'^[a-zA-Z]+',
@@ -107,6 +106,8 @@ class Srt(SrtRules):
                  unsrtd_file_path: None | str = None,
                  presrtd_file_paths: None | list = None,
                  srt_rule: None | Callable = None,
+                 cols_delimiter: str | None = '\t',
+                 col_inds: None | int | list | tuple = None,
                  **srt_rule_kwargs: Any):
         if unsrtd_file_path:
             self.unsrtd_file_path = os.path.normpath(unsrtd_file_path)
@@ -116,6 +117,8 @@ class Srt(SrtRules):
             self.presrtd_file_paths = presrtd_file_paths
         else:
             self.presrtd_file_paths = []
+        super().__init__(cols_delimiter,
+                         col_inds)
         if srt_rule:
             self.srt_rule = srt_rule
         else:
@@ -124,6 +127,8 @@ class Srt(SrtRules):
             self.srt_rule_kwargs = srt_rule_kwargs
         else:
             self.srt_rule_kwargs = {}
+        self.srt_rule_settings = {'cols_delimiter': self.cols_delimiter,
+                                  'col_inds': self.col_inds} | self.srt_rule_kwargs
 
     @staticmethod
     def iter_file(file_path: str) -> str:

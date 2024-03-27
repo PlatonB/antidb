@@ -15,7 +15,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v2.6.1'
+__version__ = 'v2.7.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023-2024'}]
@@ -49,6 +49,8 @@ class Idx(Srt):
                  compr_chunk_elems_quan: int = 10000000,
                  unidx_lines_quan: int = 1000,
                  srt_rule: None | Callable = None,
+                 cols_delimiter: str | None = '\t',
+                 col_inds: None | int | list | tuple = None,
                  **srt_rule_kwargs: Any):
         self.db_file_path = os.path.normpath(db_file_path)
         if os.path.basename(db_file_path).endswith('.zst'):
@@ -68,6 +70,8 @@ class Idx(Srt):
         self.unidx_lines_quan = unidx_lines_quan
         super().__init__(unsrtd_file_path=self.full_idx_tmp_path,
                          srt_rule=srt_rule,
+                         cols_delimiter=cols_delimiter,
+                         col_inds=col_inds,
                          **srt_rule_kwargs)
         self.perf = []
 
@@ -168,7 +172,7 @@ class Idx(Srt):
                                         mode='w',
                                         level_or_option=self.compr_settings)) as mem_idx_opened:
                 mem_idx_opened.write(f'idx_srt_rule_name={self.srt_rule.__name__}\n')
-                mem_idx_opened.write(f'idx_srt_rule_kwargs={self.srt_rule_kwargs}\n')
+                mem_idx_opened.write(f'idx_srt_rule_settings={self.srt_rule_settings}\n')
                 mem_idx_opened.write(f'unidx_lines_quan={self.unidx_lines_quan}\n')
                 while True:
                     full_idx_lstart = full_idx_opened.tell()
@@ -187,11 +191,15 @@ class Prs(Idx):
                  db_file_path: str,
                  idx_prefix: str,
                  srt_rule: None | Callable = None,
+                 cols_delimiter: str | None = '\t',
+                 col_inds: None | int | list | tuple = None,
                  **srt_rule_kwargs: Any):
         super().__init__(db_file_path,
                          idx_prefix,
                          your_line_parser=None,
                          srt_rule=srt_rule,
+                         cols_delimiter=cols_delimiter,
+                         col_inds=col_inds,
                          **srt_rule_kwargs)
         if not os.path.exists(self.db_zst_path):
             raise FileNotFoundError(self.db_zst_path)
@@ -209,14 +217,14 @@ class Prs(Idx):
             self.mem_idx_opened = TextIOWrapper(ZstdFile(self.mem_idx_path,
                                                          mode='r'))
         mem_idx = self.read_mem_idx()
-        self.idx_srt_rule_name, self.idx_srt_rule_kwargs, self.unidx_lines_quan = mem_idx[:3]
+        self.idx_srt_rule_name, self.idx_srt_rule_settings, self.unidx_lines_quan = mem_idx[:3]
         self.mem_idx_your_vals, self.full_idx_lstarts = mem_idx[3:]
         if self.idx_srt_rule_name != self.srt_rule.__name__:
             warn(f"""Your sort key name ({self.srt_rule.__name__}) doesn't
-                 match the index sort key name ({self.idx_srt_rule_name})""")
-        if self.idx_srt_rule_kwargs != self.srt_rule_kwargs:
-            warn(f"""Your sort key arguments ({self.srt_rule_kwargs}) don't
-                 match the index sort key arguments ({self.idx_srt_rule_kwargs})""")
+match the index sort key name ({self.idx_srt_rule_name})""")
+        if self.idx_srt_rule_settings != self.srt_rule_settings:
+            warn(f"""Your sort key settings ({self.srt_rule_settings}) don't
+match the index sort key settings ({self.idx_srt_rule_settings})""")
 
     def read_mem_idx(self):
         idx_srt_rule_name = self.mem_idx_opened.readline().rstrip().split('=')[1]
