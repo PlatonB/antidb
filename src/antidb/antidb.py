@@ -15,7 +15,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v2.7.0'
+__version__ = 'v2.8.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023-2024'}]
@@ -43,15 +43,16 @@ class Idx(Srt):
                  db_file_path: str,
                  idx_prefix: str,
                  your_line_parser: Callable,
+                 your_line_parser_kwargs: None | dict = None,
                  compr_level: int = 6,
                  compr_frame_size: int = 1024 * 1024,
                  compr_chunk_size: int = 1024 * 1024 * 1024,
                  compr_chunk_elems_quan: int = 10000000,
                  unidx_lines_quan: int = 1000,
                  srt_rule: None | Callable = None,
+                 srt_rule_kwargs: None | dict = None,
                  cols_delimiter: str | None = '\t',
-                 col_inds: None | int | list | tuple = None,
-                 **srt_rule_kwargs: Any):
+                 col_inds: None | int | list | tuple = None):
         self.db_file_path = os.path.normpath(db_file_path)
         if os.path.basename(db_file_path).endswith('.zst'):
             self.db_zst_path = self.db_file_path[:]
@@ -59,6 +60,10 @@ class Idx(Srt):
             self.db_zst_path = self.db_file_path + '.zst'
         self.idx_prefix = idx_prefix
         self.your_line_parser = your_line_parser
+        if your_line_parser_kwargs:
+            self.your_line_parser_kwargs = your_line_parser_kwargs
+        else:
+            self.your_line_parser_kwargs = {}
         self.full_idx_path = f'{self.db_zst_path}.{self.idx_prefix}.full'
         self.full_idx_tmp_path = self.full_idx_path + '.tmp'
         self.full_idx_tmp_srtd_path = self.full_idx_tmp_path + '.srtd'
@@ -68,6 +73,8 @@ class Idx(Srt):
         self.compr_chunk_size = compr_chunk_size
         self.compr_chunk_elems_quan = compr_chunk_elems_quan
         self.unidx_lines_quan = unidx_lines_quan
+        if not srt_rule_kwargs:
+            srt_rule_kwargs = {}
         super().__init__(unsrtd_file_path=self.full_idx_tmp_path,
                          srt_rule=srt_rule,
                          cols_delimiter=cols_delimiter,
@@ -137,7 +144,8 @@ class Idx(Srt):
                         if chunk:
                             full_idx_tmp_opened.write('\n'.join(chunk) + '\n')
                         break
-                    your_line_parser_out = self.your_line_parser(db_zst_line)
+                    your_line_parser_out = self.your_line_parser(db_zst_line,
+                                                                 **self.your_line_parser_kwargs)
                     if not your_line_parser_out:
                         continue
                     elif type(your_line_parser_out) in [str, int, float, Decimal]:
@@ -191,16 +199,16 @@ class Prs(Idx):
                  db_file_path: str,
                  idx_prefix: str,
                  srt_rule: None | Callable = None,
+                 srt_rule_kwargs: None | dict = None,
                  cols_delimiter: str | None = '\t',
-                 col_inds: None | int | list | tuple = None,
-                 **srt_rule_kwargs: Any):
+                 col_inds: None | int | list | tuple = None):
         super().__init__(db_file_path,
                          idx_prefix,
                          your_line_parser=None,
                          srt_rule=srt_rule,
+                         srt_rule_kwargs=srt_rule_kwargs,
                          cols_delimiter=cols_delimiter,
-                         col_inds=col_inds,
-                         **srt_rule_kwargs)
+                         col_inds=col_inds)
         if not os.path.exists(self.db_zst_path):
             raise FileNotFoundError(self.db_zst_path)
         else:
@@ -222,20 +230,20 @@ class Prs(Idx):
         if self.idx_srt_rule_name != self.srt_rule.__name__:
             warn(f"""Your sort key name ({self.srt_rule.__name__}) doesn't
 match the index sort key name ({self.idx_srt_rule_name})""")
-        if self.idx_srt_rule_settings != self.srt_rule_settings:
+        if self.idx_srt_rule_settings != str(self.srt_rule_settings):
             warn(f"""Your sort key settings ({self.srt_rule_settings}) don't
 match the index sort key settings ({self.idx_srt_rule_settings})""")
 
     def read_mem_idx(self):
         idx_srt_rule_name = self.mem_idx_opened.readline().rstrip().split('=')[1]
-        idx_srt_rule_kwargs = eval(self.mem_idx_opened.readline().rstrip().split('=')[1])
+        idx_srt_rule_settings = self.mem_idx_opened.readline().rstrip().split('=')[1]
         unidx_lines_quan = int(self.mem_idx_opened.readline().rstrip().split('=')[1])
         mem_idx_your_vals, full_idx_lstarts = [], []
         for mem_idx_line in self.mem_idx_opened:
             mem_idx_row = mem_idx_line.rstrip().split(',')
             mem_idx_your_vals.append(mem_idx_row[0])
             full_idx_lstarts.append(int(mem_idx_row[1]))
-        return (idx_srt_rule_name, idx_srt_rule_kwargs, unidx_lines_quan,
+        return (idx_srt_rule_name, idx_srt_rule_settings, unidx_lines_quan,
                 mem_idx_your_vals, full_idx_lstarts)
 
     def prs(self,

@@ -4,6 +4,7 @@ import sys; sys.dont_write_bytecode = True
 import unittest
 import os
 import json
+import re
 from pathlib import PurePath
 from decimal import Decimal
 from random import shuffle
@@ -14,13 +15,28 @@ from src.antidb.antisrt import (DelimitersMatchError,
                                 SrtRules,
                                 Srt)
 
-__version__ = 'v2.12.0'
+__version__ = 'v3.0.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023-2024'}]
 
 
-def remove_old_files(idx_obj):
+def get_test_content(compr_file_url: str,
+                     compr_alg: str):
+    file_path = PurePath(PurePath(__file__).parent,
+                         PurePath(compr_file_url).name.rsplit('.',
+                                                              maxsplit=1)[0]).as_posix()
+    if not os.path.exists(file_path):
+        os.system(f'''
+                  wget -q -O - {compr_file_url} |
+                  {compr_alg} -d > {file_path}''')
+    with open(file_path) as file_opened:
+        file_content = file_opened.read()
+    os.remove(file_path)
+    return file_path, file_content
+
+
+def remove_antidb_test_files(idx_obj):
     if os.path.exists(idx_obj.db_zst_path):
         os.remove(idx_obj.db_zst_path)
     if os.path.exists(idx_obj.full_idx_path):
@@ -33,23 +49,13 @@ def remove_old_files(idx_obj):
         os.remove(idx_obj.mem_idx_path)
 
 
-def remove_new_files(idx_obj):
-    os.remove(idx_obj.db_zst_path)
-    os.remove(idx_obj.full_idx_path)
-    os.remove(idx_obj.mem_idx_path)
-
-
 class AntidbTests(unittest.TestCase):
     mt_jsonbz2_url = 'https://ftp.ncbi.nih.gov/snp/archive/b156/JSON/refsnp-chrMT.json.bz2'
-    mt_json_path = PurePath(PurePath(__file__).parent,
-                            PurePath(mt_jsonbz2_url).name[:-4]).as_posix()
-    if not os.path.exists(mt_json_path):
-        os.system(f'''
-                  wget -q -O - {mt_jsonbz2_url} |
-                  bzip2 -d > {mt_json_path}''')
-    with open(mt_json_path) as mt_json_opened:
-        mt_json_content = mt_json_opened.read()
-    os.remove(mt_json_path)
+    mt_json_path, mt_json_content = get_test_content(mt_jsonbz2_url,
+                                                     'bzip2')
+    mt_vcfgz_url = 'https://ftp.ensembl.org/pub/release-111/variation/vcf/homo_sapiens/homo_sapiens-chrMT.vcf.gz'
+    mt_vcf_path, mt_vcf_content = get_test_content(mt_vcfgz_url,
+                                                   'gzip')
 
     def test_mt(self):
         if not os.path.exists(self.mt_json_path):
@@ -62,7 +68,7 @@ class AntidbTests(unittest.TestCase):
         self.assertEqual(mt_idx.srt_rule.__name__,
                          'natur')
         self.assertFalse(mt_idx.perf)
-        remove_old_files(mt_idx)
+        remove_antidb_test_files(mt_idx)
         mt_idx.idx()
         self.assertIsInstance(mt_idx.perf,
                               list)
@@ -109,7 +115,7 @@ class AntidbTests(unittest.TestCase):
                          ['2124599696',
                           '8936',
                           '368463610'])
-        remove_new_files(mt_idx)
+        remove_antidb_test_files(mt_idx)
 
     def test_mt_by_mt(self):
         if not os.path.exists(self.mt_json_path):
@@ -139,7 +145,7 @@ class AntidbTests(unittest.TestCase):
         self.assertEqual(mt_idx.srt_rule_settings,
                          {'col_inds': None,
                           'cols_delimiter': '\t'})
-        remove_old_files(mt_idx)
+        remove_antidb_test_files(mt_idx)
         mt_idx.idx()
         with pyzstd.open(mt_idx.mem_idx_path,
                          mode='rt') as mem_idx_opened:
@@ -186,7 +192,7 @@ class AntidbTests(unittest.TestCase):
                          len(mt_prs_res))
         self.assertEqual(len(mt_prs_res_mxd),
                          len(mt_zst_rsids))
-        remove_new_files(mt_idx)
+        remove_antidb_test_files(mt_idx)
 
     def test_mt_clinical(self):
         if not os.path.exists(self.mt_json_path):
@@ -206,7 +212,7 @@ class AntidbTests(unittest.TestCase):
                          'parse_mt_cln_line')
         self.assertEqual(mt_cln_idx.srt_rule.__name__,
                          'natur')
-        remove_old_files(mt_cln_idx)
+        remove_antidb_test_files(mt_cln_idx)
         mt_cln_idx.idx()
         with pyzstd.open(mt_cln_idx.full_idx_path,
                          mode='rt') as full_idx_opened:
@@ -234,7 +240,114 @@ class AntidbTests(unittest.TestCase):
         self.assertEqual(mt_cln_prs_res,
                          ['2001030',
                           '1556422499'])
-        remove_new_files(mt_cln_idx)
+        remove_antidb_test_files(mt_cln_idx)
+
+    def test_mt_info(self):
+        if not os.path.exists(self.mt_vcf_path):
+            with open(self.mt_vcf_path, 'w') as mt_vcf_opened:
+                mt_vcf_opened.write(self.mt_vcf_content)
+
+        def parse_mt_vcfzst_line(mt_vcfzst_line: str,
+                                 mt_vcfzst_metasymb: str = '',
+                                 info_keys: None | str | list = None):
+            if mt_vcfzst_line.startswith(mt_vcfzst_metasymb):
+                return None
+            info = mt_vcfzst_line.rstrip().split('\t')[-1]
+            if not info_keys:
+                return info
+            elif type(info_keys) is str:
+                info_keys = [info_keys]
+            info_row = info.split(';')
+            idx_vals = []
+            for info_cell in info_row:
+                for info_key in info_keys:
+                    if info_key == info_cell:
+                        idx_vals.append(info_cell)
+                    elif info_key == info_cell.split('=')[0]:
+                        idx_vals.append(info_cell.split('=')[1])
+            if idx_vals:
+                return idx_vals
+            else:
+                return None
+
+        def assign_idxval_type(idx_line,
+                               datatype):
+            idx_val = datatype(idx_line.split(',')[0])
+            return idx_val
+
+        mt_info_idx = Idx(self.mt_vcf_path,
+                          'info',
+                          your_line_parser=parse_mt_vcfzst_line,
+                          your_line_parser_kwargs={'mt_vcfzst_metasymb': '#',
+                                                   'info_keys': ['CLIN_pathogenic',
+                                                                 'TSA']},
+                          srt_rule=assign_idxval_type,
+                          srt_rule_kwargs={'datatype': str})
+        self.assertEqual(mt_info_idx.your_line_parser.__name__,
+                         'parse_mt_vcfzst_line')
+        self.assertEqual(mt_info_idx.your_line_parser_kwargs,
+                         {'mt_vcfzst_metasymb': '#',
+                          'info_keys': ['CLIN_pathogenic',
+                                        'TSA']})
+        self.assertEqual(mt_info_idx.srt_rule.__name__,
+                         'assign_idxval_type')
+        self.assertEqual(mt_info_idx.srt_rule_kwargs,
+                         {'datatype': str})
+        remove_antidb_test_files(mt_info_idx)
+        mt_info_idx.idx()
+        self.assertFalse(os.path.exists(mt_info_idx.db_file_path))
+        self.assertTrue(os.path.exists(mt_info_idx.full_idx_path))
+        self.assertFalse(os.path.exists(mt_info_idx.full_idx_tmp_path))
+        self.assertFalse(os.path.exists(mt_info_idx.full_idx_tmp_srtd_path))
+        self.assertTrue(os.path.exists(mt_info_idx.mem_idx_path))
+        mt_vcf_content = self.mt_vcf_content.split('\n')
+        content_idx_vals = []
+        for mt_vcf_line in mt_vcf_content:
+            if mt_vcf_line.startswith('#'):
+                continue
+            if 'CLIN_pathogenic' in mt_vcf_line:
+                content_idx_vals.append('CLIN_pathogenic')
+            tsa = re.search(r'(?<=TSA=)\w+',
+                            mt_vcf_line)
+            if tsa:
+                content_idx_vals.append(tsa.group())
+        content_idx_vals.sort()
+        full_idx_vals = []
+        with pyzstd.open(mt_info_idx.full_idx_path,
+                         mode='rt') as full_idx_opened:
+            for full_idx_line in full_idx_opened:
+                full_idx_vals.append(full_idx_line.split(',')[0])
+        for ind in range(len(content_idx_vals)):
+            self.assertEqual(content_idx_vals[ind],
+                             full_idx_vals[ind])
+        mt_info_prs = Prs(self.mt_vcf_path,
+                          'info',
+                          srt_rule=assign_idxval_type,
+                          srt_rule_kwargs={'datatype': str})
+        self.assertEqual(str(mt_info_prs.srt_rule_settings),
+                         str({'cols_delimiter': '\t',
+                              'col_inds': None,
+                              'datatype': str}))
+        content_sub_ins_lines = sorted([content_line for content_line in mt_vcf_content
+                                        if 'substitution' in content_line
+                                        or 'insertion' in content_line],
+                                       key=lambda content_line:
+                                       content_line.rstrip().split('\t')[7].split(';')[1],
+                                       reverse=True)
+        self.assertEqual(len(content_sub_ins_lines),
+                         36)
+        prs_sub_ins_lines = [prs_sub_ins_line.rstrip()
+                             for prs_sub_ins_line in mt_info_prs.prs(['substitution',
+                                                                      'insertion'])]
+        self.assertEqual(len(prs_sub_ins_lines),
+                         36)
+        for ind in range(36):
+            self.assertEqual(content_sub_ins_lines[ind],
+                             prs_sub_ins_lines[ind])
+        self.assertEqual(len(list(mt_info_prs.prs('CLIN_pathogenic'))),
+                         262)
+        self.assertFalse(list(mt_info_prs.prs('CLIN')))
+        remove_antidb_test_files(mt_info_idx)
 
 
 class SrtRulesTests(unittest.TestCase):
