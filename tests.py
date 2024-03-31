@@ -15,7 +15,7 @@ from src.antidb.antisrt import (DelimitersMatchError,
                                 SrtRules,
                                 Srt)
 
-__version__ = 'v3.0.0'
+__version__ = 'v3.1.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023-2024'}]
@@ -352,6 +352,28 @@ class AntidbTests(unittest.TestCase):
 
 class SrtRulesTests(unittest.TestCase):
     srt_rules = SrtRules()
+
+    def test_get_cols_srt_rule(self):
+        self.assertEqual(self.srt_rules.cols_delimiter,
+                         '\t')
+        self.assertIsNone(self.srt_rules.col_inds)
+        self.assertEqual(self.srt_rules.get_cols('abc\tdef'),
+                         ['abc', 'def'])
+        self.assertEqual(self.srt_rules.get_cols('123\t456'),
+                         ['123', '456'])
+        self.srt_rules.cols_delimiter = ','
+        self.assertEqual(self.srt_rules.get_cols('chr10\t1\t100\tA\tC,CC'),
+                         ['chr10\t1\t100\tA\tC', 'CC'])
+        self.srt_rules.cols_delimiter = None
+        self.assertEqual(self.srt_rules.get_cols('chr20\t2\t200\tA\tC,CC'),
+                         ['chr20\t2\t200\tA\tC,CC'])
+        self.srt_rules.cols_delimiter = '\t'
+        self.assertEqual(self.srt_rules.get_cols('chr30\t3\t300\tA\tC,CC'),
+                         ['chr30', '3', '300', 'A', 'C,CC'])
+        self.srt_rules.col_inds = [0, -1]
+        self.assertEqual(self.srt_rules.get_cols('chr40\t4\t400\tA\tC,CC'),
+                         ['chr40', 'C,CC'])
+        self.srt_rules.col_inds = None
 
     def test_natur_srt_rule(self):
         self.assertEqual(self.srt_rules.cols_delimiter,
