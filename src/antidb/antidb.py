@@ -15,7 +15,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v2.8.0'
+__version__ = 'v2.8.1'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023-2024'}]
@@ -242,7 +242,7 @@ match the index sort key settings ({self.idx_srt_rule_settings})""")
         for mem_idx_line in self.mem_idx_opened:
             mem_idx_row = mem_idx_line.rstrip().split(',')
             mem_idx_your_vals.append(mem_idx_row[0])
-            full_idx_lstarts.append(int(mem_idx_row[1]))
+            full_idx_lstarts.append(int(mem_idx_row[-1]))
         return (idx_srt_rule_name, idx_srt_rule_settings, unidx_lines_quan,
                 mem_idx_your_vals, full_idx_lstarts)
 
@@ -268,12 +268,12 @@ match the index sort key settings ({self.idx_srt_rule_settings})""")
                     break
                 full_idx_row = full_idx_line.rstrip().split(',')
                 if your_val == full_idx_row[0]:
-                    self.db_zst_opened.seek(int(full_idx_row[1]))
+                    self.db_zst_opened.seek(int(full_idx_row[-1]))
                     yield self.db_zst_opened.readline()
                     for full_idx_line in self.full_idx_opened:
                         full_idx_row = full_idx_line.rstrip().split(',')
                         if your_val != full_idx_row[0]:
                             break
-                        self.db_zst_opened.seek(int(full_idx_row[1]))
+                        self.db_zst_opened.seek(int(full_idx_row[-1]))
                         yield self.db_zst_opened.readline()
                     break
