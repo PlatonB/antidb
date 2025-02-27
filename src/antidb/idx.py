@@ -18,7 +18,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v3.0.0'
+__version__ = 'v3.1.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023-2025'}]
@@ -57,6 +57,7 @@ class Idx(SrtRules):
         else:
             self.db_zst_path = self.db_file_path + '.zst'
             self.adb_path = f'{self.db_file_path}.{idx_prefix}.adb'
+        self.temp_dir_path = os.path.dirname(self.db_file_path)
         self.your_line_prs = your_line_prs
         if your_line_prs_kwargs:
             self.your_line_prs_kwargs = your_line_prs_kwargs
@@ -107,7 +108,7 @@ class Idx(SrtRules):
                    line_starts: list) -> None:
         presrtd_data = sorted(zip(chunk,
                                   line_starts))
-        presrtd_idx_opened = TemporaryFile()
+        presrtd_idx_opened = TemporaryFile(dir=self.temp_dir_path)
         self.presrtd_idxs_opened.append(presrtd_idx_opened)
         dump(len(presrtd_data),
              presrtd_idx_opened)
