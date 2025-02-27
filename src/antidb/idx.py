@@ -18,7 +18,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v3.1.0'
+__version__ = 'v3.1.1'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023-2025'}]
@@ -84,8 +84,8 @@ class Idx(SrtRules):
     def idx(self):
         if not os.path.exists(self.db_zst_path):
             self.perf.append(self.crt_db_zst())
-        self.perf.append(self.presrt_idxs())
         if not os.path.exists(self.adb_path):
+            self.perf.append(self.presrt_idxs())
             self.perf.append(self.crt_adb())
         for presrtd_idx_opened in self.presrtd_idxs_opened:
             presrtd_idx_opened.close()
