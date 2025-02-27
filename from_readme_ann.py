@@ -5,11 +5,11 @@ import json
 import os
 from argparse import ArgumentParser
 from datetime import datetime
-from antidb import (Idx,
-                    Prs,
-                    count_exec_time)
+from src.antidb.idx import (Idx,
+                            count_exec_time)
+from src.antidb.prs import Prs
 
-__version__ = 'v1.0.0'
+__version__ = 'v1.1.0'
 
 
 def parse_dbsnp_line(dbsnp_zst_line):
@@ -29,11 +29,11 @@ def parse_rsmerged_line(rsmerged_zst_line):
 
 def rsid_to_coords(rsid, dbsnp_prs,
                    rsmerged_prs, parse_rsmerged_line):
-    for dbsnp_zst_line in dbsnp_prs.prs(rsid):
+    for dbsnp_zst_line in dbsnp_prs.eq(rsid):
         return dbsnp_zst_line
-    for rsmerged_zst_line in rsmerged_prs.prs(rsid):
+    for rsmerged_zst_line in rsmerged_prs.eq(rsid):
         rsid_syns = parse_rsmerged_line(rsmerged_zst_line)
-        for dbsnp_zst_line in dbsnp_prs.prs(rsid_syns):
+        for dbsnp_zst_line in dbsnp_prs.eq(rsid_syns):
             return dbsnp_zst_line
     return None
 

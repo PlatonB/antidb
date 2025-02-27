@@ -3,351 +3,335 @@ import sys; sys.dont_write_bytecode = True
 # autopep8: on
 import unittest
 import os
-import json
-import re
-from pathlib import PurePath
-from decimal import Decimal
-from random import shuffle
-import pyzstd
-from src.antidb.antidb import (Idx,
-                               Prs)
-from src.antidb.antisrt import (DelimitersMatchError,
-                                SrtRules,
-                                Srt)
+from src.antidb.srt import *
+from src.antidb.idx import *
+from src.antidb.prs import *
 
-__version__ = 'v3.1.0'
+__version__ = 'v4.0.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
-                'years': '2023-2024'}]
-
-
-def get_test_content(compr_file_url: str,
-                     compr_alg: str):
-    file_path = PurePath(PurePath(__file__).parent,
-                         PurePath(compr_file_url).name.rsplit('.',
-                                                              maxsplit=1)[0]).as_posix()
-    if not os.path.exists(file_path):
-        os.system(f'''
-                  wget -q -O - {compr_file_url} |
-                  {compr_alg} -d > {file_path}''')
-    with open(file_path) as file_opened:
-        file_content = file_opened.read()
-    os.remove(file_path)
-    return file_path, file_content
-
-
-def remove_antidb_test_files(idx_obj):
-    if os.path.exists(idx_obj.db_zst_path):
-        os.remove(idx_obj.db_zst_path)
-    if os.path.exists(idx_obj.full_idx_path):
-        os.remove(idx_obj.full_idx_path)
-    if os.path.exists(idx_obj.full_idx_tmp_path):
-        os.remove(idx_obj.full_idx_tmp_path)
-    if os.path.exists(idx_obj.full_idx_tmp_srtd_path):
-        os.remove(idx_obj.full_idx_tmp_srtd_path)
-    if os.path.exists(idx_obj.mem_idx_path):
-        os.remove(idx_obj.mem_idx_path)
+                'years': '2023-2025'}]
 
 
 class AntidbTests(unittest.TestCase):
-    mt_jsonbz2_url = 'https://ftp.ncbi.nih.gov/snp/archive/b156/JSON/refsnp-chrMT.json.bz2'
-    mt_json_path, mt_json_content = get_test_content(mt_jsonbz2_url,
-                                                     'bzip2')
-    mt_vcfgz_url = 'https://ftp.ensembl.org/pub/release-111/variation/vcf/homo_sapiens/homo_sapiens-chrMT.vcf.gz'
-    mt_vcf_path, mt_vcf_content = get_test_content(mt_vcfgz_url,
-                                                   'gzip')
+    src_bed = ['1\t116545156\t116545157\trs12044852\n',
+               '1\t241782991\t241782992\trs952084\n',
+               '1\t154527612\t154527613\trs4131514\n',
+               '1\t201015351\t201015352\trs12122721\n',
+               '1\t92515681\t92515682\trs17371561\n',
+               '1\t92543755\t92543756\trs11804321\n',
+               '1\t92580419\t92580420\trs17380378\n',
+               '1\t24977084\t24977085\trs10903122\n',
+               '1\t92516860\t92516861\trs11581176\n',
+               '1\t92543755\t92543756\trs11804321\n',
+               '1\t92516860\t92516861\trs11581176\n',
+               '1\t86877126\t86877127\trs581405\n',
+               '1\t237115473\t237115474\trs10925318\n',
+               '1\t86876786\t86876787\trs479341\n',
+               '1\t66265029\t66265030\trs1321172\n',
+               '1\t92543755\t92543756\trs11804321\n']
+    src_file_path = os.path.join(os.getcwd(),
+                                 'bed.bed')
+    db_zst_path = os.path.join(os.getcwd(),
+                               'bed.bed.zst')
 
-    def test_mt(self):
-        if not os.path.exists(self.mt_json_path):
-            with open(self.mt_json_path, 'w') as mt_json_opened:
-                mt_json_opened.write(self.mt_json_content)
-        mt_idx = Idx(self.mt_json_path,
-                     'rsids',
-                     lambda mt_zst_line:
-                     json.loads(mt_zst_line)['refsnp_id'])
-        self.assertEqual(mt_idx.srt_rule.__name__,
-                         'natur')
-        self.assertFalse(mt_idx.perf)
-        remove_antidb_test_files(mt_idx)
-        mt_idx.idx()
-        self.assertIsInstance(mt_idx.perf,
-                              list)
-        self.assertEqual(len(mt_idx.perf),
-                         5)
-        self.assertEqual(mt_idx.perf[0][0:2],
-                         ('crt_db_zst',
-                          None))
-        self.assertEqual(mt_idx.perf[1][0:2],
-                         ('crt_full_idx_tmp',
-                          None))
-        self.assertEqual(mt_idx.perf[2][0:2],
-                         ('crt_full_idx_tmp_srtd',
-                          None))
-        self.assertEqual(mt_idx.perf[3][0:2],
-                         ('crt_full_idx',
-                          None))
-        self.assertEqual(mt_idx.perf[4][0:2],
-                         ('crt_mem_idx',
-                          None))
-        with pyzstd.open(mt_idx.full_idx_path,
-                         mode='rt') as full_idx_opened:
-            full_idx_lines_cnt = 0
-            for full_idx_line in full_idx_opened:
-                full_idx_lines_cnt += 1
-            self.assertEqual(full_idx_lines_cnt, 7891)
-        with pyzstd.open(mt_idx.mem_idx_path,
-                         mode='rt') as mem_idx_opened:
-            mem_idx_lines_cnt = 0
-            for mem_idx_line in mem_idx_opened:
-                mem_idx_lines_cnt += 1
-            self.assertEqual(mem_idx_lines_cnt, 11)
-        mt_prs = Prs(self.mt_json_path,
-                     'rsids')
-        self.assertEqual(mt_prs.idx_srt_rule_name,
-                         'natur')
-        mt_prs_res = []
-        for mt_zst_line in mt_prs.prs(['2124599696',
-                                       8936,
-                                       Decimal('368463610'),
-                                       'nonexistent']):
-            mt_prs_res.append(json.loads(mt_zst_line)['refsnp_id'])
-        self.assertEqual(mt_prs_res,
-                         ['2124599696',
-                          '8936',
-                          '368463610'])
-        remove_antidb_test_files(mt_idx)
+    def test_common(self):
+        adb_path = os.path.join(os.getcwd(),
+                                'bed.bed.rsids.adb')
+        with open(self.src_file_path, 'w') as src_file_opened:
+            for src_line in self.src_bed:
+                src_file_opened.write(src_line)
+        self.assertTrue(os.path.isfile(self.src_file_path))
+        if os.path.exists(self.db_zst_path):
+            os.remove(self.db_zst_path)
+        if os.path.exists(adb_path):
+            os.remove(adb_path)
+        idx_obj = Idx(db_file_path=self.src_file_path,
+                      idx_prefix='rsids',
+                      your_line_prs=lambda line:
+                      line.split('\t')[-1],
+                      presrt_chunk_elems_quan=5,
+                      idx_chunk_elems_quan=5)
+        idx_obj.idx()
+        self.assertEqual(len(idx_obj.presrtd_idxs_opened), 4)
+        self.assertTrue(os.path.isfile(self.src_file_path))
+        self.assertTrue(os.path.isfile(self.db_zst_path))
+        self.assertTrue(os.path.isfile(adb_path))
+        with ZipFile(adb_path) as adb_opened_r:
+            adb_content = adb_opened_r.namelist()
+            idx_names = []
+            idx_begins = []
+            b_names = []
+            for file_name in adb_content:
+                if file_name.endswith('.idx'):
+                    idx_names.append(file_name)
+                    idx_begins.append(eval(file_name.replace('.idx',
+                                                             '')))
+                elif file_name.endswith('.b'):
+                    b_names.append(file_name)
+            srtd_idx_names = sorted(idx_names)
+            self.assertEqual(srtd_idx_names[0],
+                             "[[inf, 'rs', 10903122]].idx")
+            self.assertEqual(srtd_idx_names[1],
+                             "[[inf, 'rs', 11804321]].idx")
+            self.assertEqual(srtd_idx_names[2],
+                             "[[inf, 'rs', 17380378]].idx")
+            self.assertEqual(srtd_idx_names[3],
+                             "[[inf, 'rs', 479341]].idx")
+            self.assertEqual(len(srtd_idx_names),
+                             4)
+            srtd_b_names = sorted(b_names)
+            self.assertEqual(srtd_b_names[0],
+                             "[[inf, 'rs', 10903122]].b")
+            self.assertEqual(srtd_b_names[1],
+                             "[[inf, 'rs', 11804321]].b")
+            self.assertEqual(srtd_b_names[2],
+                             "[[inf, 'rs', 17380378]].b")
+            self.assertEqual(srtd_b_names[3],
+                             "[[inf, 'rs', 479341]].b")
+            self.assertEqual(len(srtd_b_names),
+                             4)
+            srtd_idx_begins = sorted(idx_begins)
+            self.assertEqual(srtd_idx_begins[0],
+                             [[float('+inf'),
+                               'rs', 479341]])
+            self.assertEqual(srtd_idx_begins[1],
+                             [[float('+inf'),
+                               'rs', 10903122]])
+            self.assertEqual(srtd_idx_begins[2],
+                             [[float('+inf'),
+                               'rs', 11804321]])
+            self.assertEqual(srtd_idx_begins[3],
+                             [[float('+inf'),
+                               'rs', 17380378]])
+            self.assertEqual(len(srtd_idx_begins),
+                             4)
+            self.assertTrue('meta.txt' in adb_content)
+            self.assertEqual(len(adb_content),
+                             9)
+            with ZstdFile(adb_opened_r.open("[[inf, 'rs', 479341]].idx")) as fir_idx_opened:
+                fir_idx = load(fir_idx_opened)
+                self.assertEqual(fir_idx[0],
+                                 [[inf, 'rs', 479341]])
+                self.assertEqual(fir_idx[1],
+                                 [[inf, 'rs', 581405]])
+                self.assertEqual(fir_idx[2],
+                                 [[inf, 'rs', 952084]])
+                self.assertEqual(fir_idx[3],
+                                 [[inf, 'rs', 1321172]])
+                self.assertEqual(fir_idx[4],
+                                 [[inf, 'rs', 4131514]])
+                self.assertEqual(len(fir_idx),
+                                 5)
+            with ZstdFile(adb_opened_r.open("[[inf, 'rs', 10903122]].idx")) as sec_idx_opened:
+                sec_idx = load(sec_idx_opened)
+                self.assertEqual(sec_idx[0],
+                                 [[inf, 'rs', 10903122]])
+                self.assertEqual(sec_idx[1],
+                                 [[inf, 'rs', 10925318]])
+                self.assertEqual(sec_idx[2],
+                                 [[inf, 'rs', 11581176]])
+                self.assertEqual(sec_idx[3],
+                                 [[inf, 'rs', 11581176]])
+                self.assertEqual(sec_idx[4],
+                                 [[inf, 'rs', 11804321]])
+                self.assertEqual(len(sec_idx),
+                                 5)
+            with ZstdFile(adb_opened_r.open("[[inf, 'rs', 11804321]].idx")) as thi_idx_opened:
+                thi_idx = load(thi_idx_opened)
+                self.assertEqual(thi_idx[0],
+                                 [[inf, 'rs', 11804321]])
+                self.assertEqual(thi_idx[1],
+                                 [[inf, 'rs', 11804321]])
+                self.assertEqual(thi_idx[2],
+                                 [[inf, 'rs', 12044852]])
+                self.assertEqual(thi_idx[3],
+                                 [[inf, 'rs', 12122721]])
+                self.assertEqual(thi_idx[4],
+                                 [[inf, 'rs', 17371561]])
+                self.assertEqual(len(thi_idx),
+                                 5)
+            with ZstdFile(adb_opened_r.open("[[inf, 'rs', 17380378]].idx")) as fou_idx_opened:
+                fou_idx = load(fou_idx_opened)
+                self.assertEqual(fou_idx[0],
+                                 [[inf, 'rs', 17380378]])
+                self.assertEqual(len(fou_idx),
+                                 1)
+        prs_obj = Prs(db_file_path=self.src_file_path,
+                      idx_prefix='rsids')
+        self.assertEqual(list(prs_obj.eq('rs12044852')),
+                         ['1\t116545156\t116545157\trs12044852\n'])
+        self.assertEqual(list(prs_obj.eq('rs952084')),
+                         ['1\t241782991\t241782992\trs952084\n'])
+        self.assertEqual(list(prs_obj.eq('rs4131514')),
+                         ['1\t154527612\t154527613\trs4131514\n'])
+        self.assertEqual(list(prs_obj.eq('rs12122721')),
+                         ['1\t201015351\t201015352\trs12122721\n'])
+        self.assertEqual(list(prs_obj.eq('rs17371561')),
+                         ['1\t92515681\t92515682\trs17371561\n'])
+        self.assertEqual(list(prs_obj.eq('rs11804321')),
+                         ['1\t92543755\t92543756\trs11804321\n',
+                          '1\t92543755\t92543756\trs11804321\n',
+                          '1\t92543755\t92543756\trs11804321\n'])
+        self.assertEqual(list(prs_obj.eq('rs17380378')),
+                         ['1\t92580419\t92580420\trs17380378\n'])
+        self.assertEqual(list(prs_obj.eq('rs10903122')),
+                         ['1\t24977084\t24977085\trs10903122\n'])
+        self.assertEqual(list(prs_obj.eq('rs11581176')),
+                         ['1\t92516860\t92516861\trs11581176\n',
+                          '1\t92516860\t92516861\trs11581176\n'])
+        self.assertEqual(list(prs_obj.eq('rs581405')),
+                         ['1\t86877126\t86877127\trs581405\n'])
+        self.assertEqual(list(prs_obj.eq('rs10925318')),
+                         ['1\t237115473\t237115474\trs10925318\n'])
+        self.assertEqual(list(prs_obj.eq('rs479341')),
+                         ['1\t86876786\t86876787\trs479341\n'])
+        self.assertEqual(list(prs_obj.eq('rs1321172')),
+                         ['1\t66265029\t66265030\trs1321172\n'])
+        self.assertEqual(list(prs_obj.eq('rs00000')),
+                         [])
+        self.assertEqual(list(prs_obj.eq('rs11804321',
+                                         'rs11581176',
+                                         'hz12345')),
+                         ['1\t92543755\t92543756\trs11804321\n',
+                          '1\t92543755\t92543756\trs11804321\n',
+                          '1\t92543755\t92543756\trs11804321\n',
+                          '1\t92516860\t92516861\trs11581176\n',
+                          '1\t92516860\t92516861\trs11581176\n'])
+        self.assertEqual(list(prs_obj.rng('rs479341',
+                                          'rs952084')),
+                         ['1\t86876786\t86876787\trs479341\n',
+                          '1\t86877126\t86877127\trs581405\n',
+                          '1\t241782991\t241782992\trs952084\n'])
+        self.assertEqual(list(prs_obj.rng('rs4131514',
+                                          'rs10903122')),
+                         ['1\t154527612\t154527613\trs4131514\n',
+                          '1\t24977084\t24977085\trs10903122\n'])
+        self.assertEqual(list(prs_obj.rng('rs11804321',
+                                          'rs11804321')),
+                         ['1\t92543755\t92543756\trs11804321\n',
+                          '1\t92543755\t92543756\trs11804321\n',
+                          '1\t92543755\t92543756\trs11804321\n'])
+        self.assertEqual(list(prs_obj.rng('rs12122721',
+                                          'rs17380378')),
+                         ['1\t201015351\t201015352\trs12122721\n',
+                          '1\t92515681\t92515682\trs17371561\n',
+                          '1\t92580419\t92580420\trs17380378\n'])
+        self.assertEqual(list(prs_obj.rng('rs00000',
+                                          'rs480000')),
+                         ['1\t86876786\t86876787\trs479341\n'])
+        self.assertEqual(list(prs_obj.rng('rs4000000',
+                                          'rs11900000')),
+                         ['1\t154527612\t154527613\trs4131514\n',
+                          '1\t24977084\t24977085\trs10903122\n',
+                          '1\t237115473\t237115474\trs10925318\n',
+                          '1\t92516860\t92516861\trs11581176\n',
+                          '1\t92516860\t92516861\trs11581176\n',
+                          '1\t92543755\t92543756\trs11804321\n',
+                          '1\t92543755\t92543756\trs11804321\n',
+                          '1\t92543755\t92543756\trs11804321\n'])
+        self.assertEqual(list(prs_obj.rng('rs17380000',
+                                          'rs99999999')),
+                         ['1\t92580419\t92580420\trs17380378\n'])
+        self.assertRaises(QueryStartGtEndError,
+                          lambda query_start, query_end:
+                          list(prs_obj.rng(query_start,
+                                           query_end)),
+                          'rs11900000',
+                          'rs4000000')
+        os.remove(self.src_file_path)
+        os.remove(self.db_zst_path)
+        os.remove(adb_path)
 
-    def test_mt_by_mt(self):
-        if not os.path.exists(self.mt_json_path):
-            with open(self.mt_json_path, 'w') as mt_json_opened:
-                mt_json_opened.write(self.mt_json_content)
+    def test_coords(self):
+        adb_path = os.path.join(os.getcwd(),
+                                'bed.bed.coords.adb')
+        with open(self.src_file_path, 'w') as src_file_opened:
+            for src_line in self.src_bed:
+                src_file_opened.write(src_line)
+        if os.path.exists(self.db_zst_path):
+            os.remove(self.db_zst_path)
+        if os.path.exists(adb_path):
+            os.remove(adb_path)
 
-        def parse_mt_line(mt_zst_line):
-            return json.loads(mt_zst_line)['refsnp_id']
+        def get_coords(src_bed_line: str):
+            src_bed_row = src_bed_line.rstrip().split('\t')
+            coords = [f'chr{src_bed_row[0]}',
+                      int(src_bed_row[1]),
+                      int(src_bed_row[2])]
+            return coords
 
-        def alpha_srt_rule(full_idx_line):
-            return full_idx_line.split('\t')[0]
-
-        mt_idx = Idx(self.mt_json_path,
-                     'rsids',
-                     parse_mt_line,
-                     compr_frame_size=1024,
-                     compr_chunk_size=1024,
-                     compr_chunk_elems_quan=10,
-                     unidx_lines_quan=10,
-                     srt_rule=alpha_srt_rule)
-        self.assertEqual(mt_idx.your_line_parser.__name__,
-                         'parse_mt_line')
-        self.assertEqual(mt_idx.srt_rule.__name__,
-                         'alpha_srt_rule')
-        self.assertEqual(mt_idx.srt_rule_kwargs,
-                         {})
-        self.assertEqual(mt_idx.srt_rule_settings,
-                         {'col_inds': None,
-                          'cols_delimiter': '\t'})
-        remove_antidb_test_files(mt_idx)
-        mt_idx.idx()
-        with pyzstd.open(mt_idx.mem_idx_path,
-                         mode='rt') as mem_idx_opened:
-            idx_srt_rule_name = mem_idx_opened.readline().rstrip().split('=')[1]
-            idx_srt_rule_settings = eval(mem_idx_opened.readline().rstrip().split('=')[1])
-            unidx_lines_quan = int(mem_idx_opened.readline().rstrip().split('=')[1])
-            self.assertEqual(idx_srt_rule_name,
-                             'alpha_srt_rule')
-            self.assertEqual(idx_srt_rule_settings,
-                             {'col_inds': None,
-                              'cols_delimiter': '\t'})
-            self.assertEqual(unidx_lines_quan,
-                             10)
-        mt_prs = Prs(self.mt_json_path,
-                     'rsids',
-                     srt_rule=alpha_srt_rule)
-        self.assertIsNone(mt_prs.your_line_parser)
-        self.assertEqual(mt_prs.srt_rule.__name__,
-                         'alpha_srt_rule')
-        self.assertEqual(mt_prs.srt_rule_kwargs,
-                         {})
-        self.assertEqual(mt_prs.srt_rule_settings,
-                         {'col_inds': None,
-                          'cols_delimiter': '\t'})
-        with pyzstd.open(mt_prs.db_zst_path,
-                         mode='rt') as mt_zst_opened:
-            mt_zst_rsids = [json.loads(mt_zst_line)['refsnp_id']
-                            for mt_zst_line in mt_zst_opened]
-        mt_prs_res = [parse_mt_line(mt_zst_line)
-                      for mt_zst_line in mt_prs.prs(mt_zst_rsids)]
-        self.assertEqual(mt_zst_rsids,
-                         mt_prs_res)
-        mt_zst_rsids_mxd = mt_zst_rsids[:]
-        shuffle(mt_zst_rsids_mxd)
-        mt_prs_res_mxd = [parse_mt_line(mt_zst_line)
-                          for mt_zst_line in mt_prs.prs(mt_zst_rsids_mxd)]
-        self.assertNotEqual(mt_zst_rsids_mxd,
-                            mt_zst_rsids)
-        self.assertNotEqual(mt_prs_res_mxd,
-                            mt_prs_res)
-        self.assertEqual(len(mt_zst_rsids_mxd),
-                         len(mt_zst_rsids))
-        self.assertEqual(len(mt_prs_res_mxd),
-                         len(mt_prs_res))
-        self.assertEqual(len(mt_prs_res_mxd),
-                         len(mt_zst_rsids))
-        remove_antidb_test_files(mt_idx)
-
-    def test_mt_clinical(self):
-        if not os.path.exists(self.mt_json_path):
-            with open(self.mt_json_path, 'w') as mt_json_opened:
-                mt_json_opened.write(self.mt_json_content)
-
-        def parse_mt_cln_line(mt_zst_line):
-            mt_zst_obj = json.loads(mt_zst_line)
-            if len(mt_zst_obj['primary_snapshot_data']['allele_annotations'][0]['clinical']) > 0:
-                return mt_zst_obj['refsnp_id']
-            return None
-
-        mt_cln_idx = Idx(self.mt_json_path,
-                         'rsids_cln',
-                         parse_mt_cln_line)
-        self.assertEqual(mt_cln_idx.your_line_parser.__name__,
-                         'parse_mt_cln_line')
-        self.assertEqual(mt_cln_idx.srt_rule.__name__,
-                         'natur')
-        remove_antidb_test_files(mt_cln_idx)
-        mt_cln_idx.idx()
-        with pyzstd.open(mt_cln_idx.full_idx_path,
-                         mode='rt') as full_idx_opened:
-            full_idx_lines_cnt = 0
-            for full_idx_line in full_idx_opened:
-                full_idx_lines_cnt += 1
-            self.assertEqual(full_idx_lines_cnt, 2)
-        with pyzstd.open(mt_cln_idx.mem_idx_path,
-                         mode='rt') as mem_idx_opened:
-            mem_idx_lines_cnt = 0
-            for mem_idx_line in mem_idx_opened:
-                mem_idx_lines_cnt += 1
-            self.assertEqual(mem_idx_lines_cnt, 4)
-        mt_cln_prs = Prs(self.mt_json_path,
-                         'rsids_cln')
-        self.assertEqual(mt_cln_prs.srt_rule.__name__,
-                         'natur')
-        mt_cln_prs_res = []
-        for mt_zst_line in mt_cln_prs.prs(['qwerty',
-                                           '2001030',
-                                           'uiopas',
-                                           '1556422499',
-                                           'dfghjk']):
-            mt_cln_prs_res.append(json.loads(mt_zst_line)['refsnp_id'])
-        self.assertEqual(mt_cln_prs_res,
-                         ['2001030',
-                          '1556422499'])
-        remove_antidb_test_files(mt_cln_idx)
-
-    def test_mt_info(self):
-        if not os.path.exists(self.mt_vcf_path):
-            with open(self.mt_vcf_path, 'w') as mt_vcf_opened:
-                mt_vcf_opened.write(self.mt_vcf_content)
-
-        def parse_mt_vcfzst_line(mt_vcfzst_line: str,
-                                 mt_vcfzst_metasymb: str = '',
-                                 info_keys: None | str | list = None):
-            if mt_vcfzst_line.startswith(mt_vcfzst_metasymb):
-                return None
-            info = mt_vcfzst_line.rstrip().split('\t')[-1]
-            if not info_keys:
-                return info
-            elif type(info_keys) is str:
-                info_keys = [info_keys]
-            info_row = info.split(';')
-            idx_vals = []
-            for info_cell in info_row:
-                for info_key in info_keys:
-                    if info_key == info_cell:
-                        idx_vals.append(info_cell)
-                    elif info_key == info_cell.split('=')[0]:
-                        idx_vals.append(info_cell.split('=')[1])
-            if idx_vals:
-                return idx_vals
-            else:
-                return None
-
-        def assign_idxval_type(idx_line,
-                               datatype):
-            idx_val = datatype(idx_line.split(',')[0])
-            return idx_val
-
-        mt_info_idx = Idx(self.mt_vcf_path,
-                          'info',
-                          your_line_parser=parse_mt_vcfzst_line,
-                          your_line_parser_kwargs={'mt_vcfzst_metasymb': '#',
-                                                   'info_keys': ['CLIN_pathogenic',
-                                                                 'TSA']},
-                          srt_rule=assign_idxval_type,
-                          srt_rule_kwargs={'datatype': str})
-        self.assertEqual(mt_info_idx.your_line_parser.__name__,
-                         'parse_mt_vcfzst_line')
-        self.assertEqual(mt_info_idx.your_line_parser_kwargs,
-                         {'mt_vcfzst_metasymb': '#',
-                          'info_keys': ['CLIN_pathogenic',
-                                        'TSA']})
-        self.assertEqual(mt_info_idx.srt_rule.__name__,
-                         'assign_idxval_type')
-        self.assertEqual(mt_info_idx.srt_rule_kwargs,
-                         {'datatype': str})
-        remove_antidb_test_files(mt_info_idx)
-        mt_info_idx.idx()
-        self.assertFalse(os.path.exists(mt_info_idx.db_file_path))
-        self.assertTrue(os.path.exists(mt_info_idx.full_idx_path))
-        self.assertFalse(os.path.exists(mt_info_idx.full_idx_tmp_path))
-        self.assertFalse(os.path.exists(mt_info_idx.full_idx_tmp_srtd_path))
-        self.assertTrue(os.path.exists(mt_info_idx.mem_idx_path))
-        mt_vcf_content = self.mt_vcf_content.split('\n')
-        content_idx_vals = []
-        for mt_vcf_line in mt_vcf_content:
-            if mt_vcf_line.startswith('#'):
-                continue
-            if 'CLIN_pathogenic' in mt_vcf_line:
-                content_idx_vals.append('CLIN_pathogenic')
-            tsa = re.search(r'(?<=TSA=)\w+',
-                            mt_vcf_line)
-            if tsa:
-                content_idx_vals.append(tsa.group())
-        content_idx_vals.sort()
-        full_idx_vals = []
-        with pyzstd.open(mt_info_idx.full_idx_path,
-                         mode='rt') as full_idx_opened:
-            for full_idx_line in full_idx_opened:
-                full_idx_vals.append(full_idx_line.split(',')[0])
-        for ind in range(len(content_idx_vals)):
-            self.assertEqual(content_idx_vals[ind],
-                             full_idx_vals[ind])
-        mt_info_prs = Prs(self.mt_vcf_path,
-                          'info',
-                          srt_rule=assign_idxval_type,
-                          srt_rule_kwargs={'datatype': str})
-        self.assertEqual(str(mt_info_prs.srt_rule_settings),
-                         str({'cols_delimiter': '\t',
-                              'col_inds': None,
-                              'datatype': str}))
-        content_sub_ins_lines = sorted([content_line for content_line in mt_vcf_content
-                                        if 'substitution' in content_line
-                                        or 'insertion' in content_line],
-                                       key=lambda content_line:
-                                       content_line.rstrip().split('\t')[7].split(';')[1],
-                                       reverse=True)
-        self.assertEqual(len(content_sub_ins_lines),
-                         36)
-        prs_sub_ins_lines = [prs_sub_ins_line.rstrip()
-                             for prs_sub_ins_line in mt_info_prs.prs(['substitution',
-                                                                      'insertion'])]
-        self.assertEqual(len(prs_sub_ins_lines),
-                         36)
-        for ind in range(36):
-            self.assertEqual(content_sub_ins_lines[ind],
-                             prs_sub_ins_lines[ind])
-        self.assertEqual(len(list(mt_info_prs.prs('CLIN_pathogenic'))),
-                         262)
-        self.assertFalse(list(mt_info_prs.prs('CLIN')))
-        remove_antidb_test_files(mt_info_idx)
+        idx_obj = Idx(db_file_path=self.src_file_path,
+                      idx_prefix='coords',
+                      your_line_prs=get_coords,
+                      presrt_chunk_elems_quan=8,
+                      idx_chunk_elems_quan=8,
+                      srt_rule=lambda val: val)
+        idx_obj.idx()
+        with ZipFile(adb_path) as adb_opened_r:
+            with ZstdFile(adb_opened_r.open("['chr1', 24977084, 24977085].idx")) as fir_idx_opened:
+                fir_idx = load(fir_idx_opened)
+                self.assertEqual(fir_idx[0],
+                                 ['chr1', 24977084, 24977085])
+                self.assertEqual(fir_idx[1],
+                                 ['chr1', 66265029, 66265030])
+                self.assertEqual(fir_idx[2],
+                                 ['chr1', 86876786, 86876787])
+                self.assertEqual(fir_idx[3],
+                                 ['chr1', 86877126, 86877127])
+                self.assertEqual(fir_idx[4],
+                                 ['chr1', 92515681, 92515682])
+                self.assertEqual(fir_idx[5],
+                                 ['chr1', 92516860, 92516861])
+                self.assertEqual(fir_idx[6],
+                                 ['chr1', 92516860, 92516861])
+                self.assertEqual(fir_idx[7],
+                                 ['chr1', 92543755, 92543756])
+                self.assertEqual(len(fir_idx),
+                                 8)
+            with ZstdFile(adb_opened_r.open("['chr1', 92543755, 92543756].idx")) as sec_idx_opened:
+                sec_idx = load(sec_idx_opened)
+                self.assertEqual(sec_idx[0],
+                                 ['chr1', 92543755, 92543756])
+                self.assertEqual(sec_idx[1],
+                                 ['chr1', 92543755, 92543756])
+                self.assertEqual(sec_idx[2],
+                                 ['chr1', 92580419, 92580420])
+                self.assertEqual(sec_idx[3],
+                                 ['chr1', 116545156, 116545157])
+                self.assertEqual(sec_idx[4],
+                                 ['chr1', 154527612, 154527613])
+                self.assertEqual(sec_idx[5],
+                                 ['chr1', 201015351, 201015352])
+                self.assertEqual(sec_idx[6],
+                                 ['chr1', 237115473, 237115474])
+                self.assertEqual(sec_idx[7],
+                                 ['chr1', 241782991, 241782992])
+                self.assertEqual(len(sec_idx),
+                                 8)
+        prs_obj = Prs(db_file_path=self.src_file_path,
+                      idx_prefix='coords',
+                      srt_rule=lambda val: val)
+        self.assertEqual(list(prs_obj.eq(['chr1', 24977084, 24977085])),
+                         ['1\t24977084\t24977085\trs10903122\n'])
+        self.assertEqual(list(prs_obj.eq(['chr1', 92543755, 92543756])),
+                         ['1\t92543755\t92543756\trs11804321\n',
+                          '1\t92543755\t92543756\trs11804321\n',
+                          '1\t92543755\t92543756\trs11804321\n'])
+        self.assertEqual(list(prs_obj.eq(['chr1', 237115473, 237115474],
+                                         ['chr1', 241782991, 241782992])),
+                         ['1\t237115473\t237115474\trs10925318\n',
+                          '1\t241782991\t241782992\trs952084\n'])
+        self.assertEqual(list(prs_obj.rng(['chr1', 92516000, 92516001],
+                                          ['chr1', 92543800, 92543801])),
+                         ['1\t92516860\t92516861\trs11581176\n',
+                          '1\t92516860\t92516861\trs11581176\n',
+                          '1\t92543755\t92543756\trs11804321\n',
+                          '1\t92543755\t92543756\trs11804321\n',
+                          '1\t92543755\t92543756\trs11804321\n'])
+        os.remove(self.src_file_path)
+        os.remove(self.db_zst_path)
+        os.remove(adb_path)
 
 
 class SrtRulesTests(unittest.TestCase):
@@ -504,187 +488,6 @@ class SrtRulesTests(unittest.TestCase):
         self.assertRaises(AttributeError,
                           self.srt_rules.letts_nums,
                           'id-1')
-
-
-class SrtTests(unittest.TestCase):
-    trf_bedgz_url = 'https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.trf.bed.gz'
-    trf_bed_path = PurePath(PurePath(__file__).parent,
-                            PurePath(trf_bedgz_url).name[:-3]).as_posix()
-    if not os.path.exists(trf_bed_path):
-        os.system(f'''
-                  wget -q -O - {trf_bedgz_url} |
-                  gzip -d > {trf_bed_path}''')
-    with open(trf_bed_path) as trf_bed_opened:
-        trf_bed_content = trf_bed_opened.readlines()
-    os.remove(trf_bed_path)
-
-    def test_trf_floats(self):
-        if not os.path.exists(self.trf_bed_path):
-            with open(self.trf_bed_path, 'w') as trf_bed_opened:
-                for trf_bed_line in self.trf_bed_content:
-                    trf_bed_opened.write(trf_bed_line)
-        trf_bed_floats = []
-        trf_bed_lines_quan = 0
-        for trf_bed_line in self.trf_bed_content:
-            trf_bed_lines_quan += 1
-            trf_bed_row = trf_bed_line.split('\t')
-            self.assertEqual(len(trf_bed_row),
-                             16)
-            trf_bed_floats.append(float(trf_bed_row[5]))
-        trf_bed_floats.sort()
-        self.assertEqual(trf_bed_lines_quan,
-                         432604)
-        srt = Srt(self.trf_bed_path,
-                  SrtRules().natur,
-                  cols_delimiter='\t',
-                  col_inds=5,
-                  nums_first=True)
-        self.assertEqual(srt.srt_rule.__name__,
-                         'natur')
-        self.assertEqual(srt.srt_rule_kwargs,
-                         {'nums_first': True})
-        self.assertEqual(srt.srt_rule_settings,
-                         {'cols_delimiter': '\t',
-                          'col_inds': 5,
-                          'nums_first': True})
-        srt.pre_srt(chunk_elems_quan=float('+inf'))
-        nat_presrtd_trf_path = f'{self.trf_bed_path}.1'
-        self.assertTrue(os.path.exists(nat_presrtd_trf_path))
-        self.assertEqual(srt.presrtd_file_paths,
-                         [nat_presrtd_trf_path])
-        with open(nat_presrtd_trf_path) as nat_presrtd_trf_opened:
-            nat_presrtd_trf_lines_quan = 0
-            nat_presrtd_trf_floats = []
-            for nat_presrtd_trf_line in nat_presrtd_trf_opened:
-                nat_presrtd_trf_lines_quan += 1
-                nat_presrtd_trf_row = nat_presrtd_trf_line.split('\t')
-                self.assertEqual(len(nat_presrtd_trf_row),
-                                 16)
-                nat_presrtd_trf_floats.append(float(nat_presrtd_trf_row[5]))
-        self.assertEqual(nat_presrtd_trf_lines_quan,
-                         432604)
-        self.assertEqual(trf_bed_floats,
-                         nat_presrtd_trf_floats)
-        srt.mrg_srt()
-        nat_srtd_trf_path = f'{self.trf_bed_path}.srtd'
-        self.assertTrue(os.path.exists(nat_srtd_trf_path))
-        self.assertFalse(os.path.exists(nat_presrtd_trf_path))
-        self.assertFalse(srt.presrtd_file_paths)
-        with open(nat_srtd_trf_path) as nat_srtd_trf_opened:
-            nat_srtd_trf_lines_quan = 0
-            nat_srtd_trf_floats = []
-            for nat_srtd_trf_line in nat_srtd_trf_opened:
-                nat_srtd_trf_lines_quan += 1
-                nat_srtd_trf_row = nat_srtd_trf_line.split('\t')
-                self.assertEqual(len(nat_srtd_trf_row),
-                                 16)
-                nat_srtd_trf_floats.append(float(nat_srtd_trf_row[5]))
-        self.assertEqual(nat_srtd_trf_lines_quan,
-                         432604)
-        self.assertEqual(trf_bed_floats,
-                         nat_srtd_trf_floats)
-        os.remove(nat_srtd_trf_path)
-        srt.srt_rule = lambda src_file_line: float(src_file_line.split('\t')[5])
-        srt.srt_rule_kwargs = {}
-        srt.pre_srt(chunk_elems_quan=108151)
-        float_presrtd_trf_paths = [f'{self.trf_bed_path}.1',
-                                   f'{self.trf_bed_path}.2',
-                                   f'{self.trf_bed_path}.3',
-                                   f'{self.trf_bed_path}.4']
-        for float_presrtd_trf_path in float_presrtd_trf_paths:
-            self.assertTrue(os.path.exists(float_presrtd_trf_path))
-            with open(float_presrtd_trf_path) as float_presrtd_trf_opened:
-                float_presrtd_trf_lines_quan = 0
-                for float_presrtd_trf_line in float_presrtd_trf_opened:
-                    self.assertEqual(len(float_presrtd_trf_line.split('\t')),
-                                     16)
-                    float_presrtd_trf_lines_quan += 1
-            self.assertEqual(float_presrtd_trf_lines_quan,
-                             108151)
-        self.assertFalse(os.path.exists(f'{self.trf_bed_path}.0'))
-        self.assertFalse(os.path.exists(f'{self.trf_bed_path}.5'))
-        self.assertEqual(sorted(srt.presrtd_file_paths),
-                         float_presrtd_trf_paths)
-        srt.mrg_srt(mrgd_file_suff='sorted',
-                    del_presrtd_files=False)
-        float_srtd_trf_path = f'{self.trf_bed_path}.sorted'
-        self.assertTrue(os.path.exists(float_srtd_trf_path))
-        with open(float_srtd_trf_path) as float_srtd_trf_opened:
-            float_srtd_trf_lines_quan = 0
-            float_srtd_trf_floats = []
-            for float_srtd_trf_line in float_srtd_trf_opened:
-                float_srtd_trf_lines_quan += 1
-                float_srtd_trf_row = float_srtd_trf_line.split('\t')
-                self.assertEqual(len(float_srtd_trf_row),
-                                 16)
-                float_srtd_trf_floats.append(float(float_srtd_trf_row[5]))
-        self.assertEqual(float_srtd_trf_lines_quan,
-                         432604)
-        self.assertEqual(trf_bed_floats,
-                         float_srtd_trf_floats)
-        for float_presrtd_trf_path in float_presrtd_trf_paths:
-            self.assertTrue(os.path.exists(float_presrtd_trf_path))
-            os.remove(float_presrtd_trf_path)
-        os.remove(float_srtd_trf_path)
-        os.remove(self.trf_bed_path)
-
-    def test_trf_2_cols(self):
-        if not os.path.exists(self.trf_bed_path):
-            with open(self.trf_bed_path, 'w') as trf_bed_opened:
-                for trf_bed_line in self.trf_bed_content:
-                    trf_bed_opened.write(trf_bed_line)
-        str_float_gnusrtd_path = f'{self.trf_bed_path}.gnusrtd'
-        os.system(f"""LC_ALL=C sort -s -t '{chr(9)}' -k16,16 -k15,15n \
-                  {self.trf_bed_path} > {str_float_gnusrtd_path}""")
-        self.assertTrue(os.path.exists(str_float_gnusrtd_path))
-        with open(str_float_gnusrtd_path) as str_float_gnusrtd_opened:
-            str_float_gnusrtd_lines_quan = 0
-            gnusrtd_strs_floats = []
-            for str_float_gnusrtd_line in str_float_gnusrtd_opened:
-                str_float_gnusrtd_lines_quan += 1
-                str_float_gnusrtd_row = str_float_gnusrtd_line.split('\t')
-                self.assertEqual(len(str_float_gnusrtd_row),
-                                 16)
-                gnusrtd_strs_floats.append([float(str_float_gnusrtd_row[14]),
-                                            str_float_gnusrtd_row[15]])
-        self.assertEqual(str_float_gnusrtd_lines_quan,
-                         432604)
-        srt = Srt(self.trf_bed_path,
-                  srt_rule=None,
-                  cols_delimiter='\t',
-                  col_inds=[15, 14])
-        self.assertEqual(srt.srt_rule.__name__,
-                         'natur')
-        self.assertEqual(srt.srt_rule_kwargs,
-                         {})
-        self.assertEqual(srt.srt_rule_settings,
-                         {'cols_delimiter': '\t',
-                          'col_inds': [15, 14]})
-        srt.pre_srt(chunk_elems_quan=108150)
-        self.assertEqual(len(srt.presrtd_file_paths),
-                         5)
-        for presrtd_file_path in srt.presrtd_file_paths:
-            self.assertTrue(os.path.exists(presrtd_file_path))
-        str_float_mrgd_path = srt.mrg_srt(mrgd_file_suff='mrgd')
-        self.assertFalse(srt.presrtd_file_paths)
-        self.assertTrue(str_float_mrgd_path)
-        with open(str_float_mrgd_path) as str_float_mrgd_opened:
-            str_float_mrgd_lines_quan = 0
-            mrgd_strs_floats = []
-            for str_float_mrgd_line in str_float_mrgd_opened:
-                str_float_mrgd_lines_quan += 1
-                str_float_mrgd_row = str_float_mrgd_line.split('\t')
-                self.assertEqual(len(str_float_mrgd_row),
-                                 16)
-                mrgd_strs_floats.append([float(str_float_mrgd_row[14]),
-                                         str_float_mrgd_row[15]])
-        self.assertEqual(str_float_mrgd_lines_quan,
-                         432604)
-        self.assertEqual(mrgd_strs_floats,
-                         gnusrtd_strs_floats)
-        os.remove(self.trf_bed_path)
-        os.remove(str_float_gnusrtd_path)
-        os.remove(str_float_mrgd_path)
 
 
 if __name__ == "__main__":

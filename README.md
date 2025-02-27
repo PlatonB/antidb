@@ -1,4 +1,8 @@
 # antidb
+
+## Note
+The project code is currently being rewritten from scratch, so the README is not really relevant.
+
 ## Quick start
 ```
 pip3 install antidb
