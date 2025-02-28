@@ -7,13 +7,13 @@ from src.antidb.srt import *
 from src.antidb.idx import *
 from src.antidb.prs import *
 
-__version__ = 'v4.0.0'
+__version__ = 'v4.1.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023-2025'}]
 
 
-class AntidbTests(unittest.TestCase):
+class BedTests(unittest.TestCase):
     src_bed = ['1\t116545156\t116545157\trs12044852\n',
                '1\t241782991\t241782992\trs952084\n',
                '1\t154527612\t154527613\trs4131514\n',
@@ -47,9 +47,10 @@ class AntidbTests(unittest.TestCase):
         if os.path.exists(adb_path):
             os.remove(adb_path)
         idx_obj = Idx(db_file_path=self.src_file_path,
-                      idx_prefix='rsids',
-                      your_line_prs=lambda line:
+                      idx_name_prefix='rsids',
+                      db_line_prs=lambda line:
                       line.split('\t')[-1],
+                      idx_srt_rule=SrtRules.natur,
                       presrt_chunk_elems_quan=5,
                       idx_chunk_elems_quan=5)
         idx_obj.idx()
@@ -158,7 +159,8 @@ class AntidbTests(unittest.TestCase):
                 self.assertEqual(len(fou_idx),
                                  1)
         prs_obj = Prs(db_file_path=self.src_file_path,
-                      idx_prefix='rsids')
+                      idx_name_prefix='rsids',
+                      idx_srt_rule=SrtRules.natur)
         self.assertEqual(list(prs_obj.eq('rs12044852')),
                          ['1\t116545156\t116545157\trs12044852\n'])
         self.assertEqual(list(prs_obj.eq('rs952084')),
@@ -262,11 +264,11 @@ class AntidbTests(unittest.TestCase):
             return coords
 
         idx_obj = Idx(db_file_path=self.src_file_path,
-                      idx_prefix='coords',
-                      your_line_prs=get_coords,
+                      idx_name_prefix='coords',
+                      db_line_prs=get_coords,
+                      idx_srt_rule=lambda val: val,
                       presrt_chunk_elems_quan=8,
-                      idx_chunk_elems_quan=8,
-                      srt_rule=lambda val: val)
+                      idx_chunk_elems_quan=8)
         idx_obj.idx()
         with ZipFile(adb_path) as adb_opened_r:
             with ZstdFile(adb_opened_r.open("['chr1', 24977084, 24977085].idx")) as fir_idx_opened:
@@ -310,8 +312,8 @@ class AntidbTests(unittest.TestCase):
                 self.assertEqual(len(sec_idx),
                                  8)
         prs_obj = Prs(db_file_path=self.src_file_path,
-                      idx_prefix='coords',
-                      srt_rule=lambda val: val)
+                      idx_name_prefix='coords',
+                      idx_srt_rule=lambda val: val)
         self.assertEqual(list(prs_obj.eq(['chr1', 24977084, 24977085])),
                          ['1\t24977084\t24977085\trs10903122\n'])
         self.assertEqual(list(prs_obj.eq(['chr1', 92543755, 92543756])),
@@ -337,32 +339,7 @@ class AntidbTests(unittest.TestCase):
 class SrtRulesTests(unittest.TestCase):
     srt_rules = SrtRules()
 
-    def test_get_cols_srt_rule(self):
-        self.assertEqual(self.srt_rules.cols_delimiter,
-                         '\t')
-        self.assertIsNone(self.srt_rules.col_inds)
-        self.assertEqual(self.srt_rules.get_cols('abc\tdef'),
-                         ['abc', 'def'])
-        self.assertEqual(self.srt_rules.get_cols('123\t456'),
-                         ['123', '456'])
-        self.srt_rules.cols_delimiter = ','
-        self.assertEqual(self.srt_rules.get_cols('chr10\t1\t100\tA\tC,CC'),
-                         ['chr10\t1\t100\tA\tC', 'CC'])
-        self.srt_rules.cols_delimiter = None
-        self.assertEqual(self.srt_rules.get_cols('chr20\t2\t200\tA\tC,CC'),
-                         ['chr20\t2\t200\tA\tC,CC'])
-        self.srt_rules.cols_delimiter = '\t'
-        self.assertEqual(self.srt_rules.get_cols('chr30\t3\t300\tA\tC,CC'),
-                         ['chr30', '3', '300', 'A', 'C,CC'])
-        self.srt_rules.col_inds = [0, -1]
-        self.assertEqual(self.srt_rules.get_cols('chr40\t4\t400\tA\tC,CC'),
-                         ['chr40', 'C,CC'])
-        self.srt_rules.col_inds = None
-
     def test_natur_srt_rule(self):
-        self.assertEqual(self.srt_rules.cols_delimiter,
-                         '\t')
-        self.assertIsNone(self.srt_rules.col_inds)
         self.assertEqual(self.srt_rules.natur('10'),
                          [[10]])
         self.assertEqual(self.srt_rules.natur('01'),
@@ -385,26 +362,13 @@ class SrtRulesTests(unittest.TestCase):
                          [[float('+inf'), 'I', 2, 'a', 2, 'a',
                            1, 'b', 2, 'a', 2, 'a', 2, '-ZS', 20]])
         self.assertEqual(self.srt_rules.natur('10\t11'),
-                         [[10], [11]])
+                         [[10, '\t', 11]])
         self.assertEqual(self.srt_rules.natur('rs10\t11'),
-                         [[float('+inf'), 'rs', 10], [11]])
-        self.srt_rules.cols_delimiter = ','
-        self.assertEqual(self.srt_rules.natur('10,11.1'),
-                         [[10], [11.1]])
-        self.srt_rules.col_inds = None
-        self.assertEqual(self.srt_rules.natur('10.1,11'),
-                         [[10.1], [11]])
-        self.srt_rules.col_inds = 1
-        self.assertEqual(self.srt_rules.natur('10,11.1'),
-                         [[11.1]])
-        self.srt_rules.col_inds = [1, 0]
-        self.assertEqual(self.srt_rules.natur('10.1,11'),
-                         [[11], [10.1]])
-        self.srt_rules.cols_delimiter = '\t'
-        self.srt_rules.col_inds = [0]
+                         [[float('+inf'), 'rs', 10, '\t', 11]])
         self.assertEqual(self.srt_rules.natur('10,11.1'),
                          [[10, ',', 11.1]])
-        self.srt_rules.col_inds = None
+        self.assertEqual(self.srt_rules.natur('10.1,11'),
+                         [[10.1, ',', 11]])
         self.assertEqual(self.srt_rules.natur('10.1,11',
                                               dec_delimiter=','),
                          [[10, '.', 1.11]])
@@ -441,38 +405,25 @@ class SrtRulesTests(unittest.TestCase):
         self.assertEqual(self.srt_rules.natur('-0e10'),
                          [[0]])
         self.assertEqual(self.srt_rules.natur('qwerty\t0.1E2'),
-                         [[float('+inf'), 'qwerty'], [10.0]])
+                         [[float('+inf'), 'qwerty\t', 10.0]])
         self.assertEqual(self.srt_rules.natur('0,1e+2\tqwerty',
                                               dec_delimiter=','),
-                         [[10.0], [float('+inf'), 'qwerty']])
-        self.srt_rules.cols_delimiter = ', '
+                         [[10.0, '\tqwerty']])
         self.assertEqual(self.srt_rules.natur('1,1, -2,2, str',
+                                              dec_delimiter=','),
+                         [[1.1, ', ', -2.2, ', str']])
+        self.assertEqual(self.srt_rules.natur(['1,1', '-2,2', 'str'],
                                               dec_delimiter=',',
                                               nums_first=False),
                          [[1.1], [-2.2], [float('-inf'), 'str']])
-        self.srt_rules.cols_delimiter = ','
-        self.assertRaises(DelimitersMatchError,
-                          self.srt_rules.natur,
-                          '111,111',
-                          dec_delimiter=',')
-        self.srt_rules.cols_delimiter = '\t'
-        self.srt_rules.col_inds = None
 
     def test_letts_nums_srt_rule(self):
-        self.assertEqual(self.srt_rules.cols_delimiter,
-                         '\t')
-        self.assertIsNone(self.srt_rules.col_inds)
         self.assertEqual(self.srt_rules.letts_nums('rs1'),
-                         [['rs', 1]])
+                         ['rs', 1])
         self.assertEqual(self.srt_rules.letts_nums('rs010'),
-                         [['rs', 10]])
-        self.srt_rules.col_inds = 0
-        self.assertEqual(self.srt_rules.letts_nums('ENSG000\trs000'),
-                         [['ENSG', 0]])
-        self.srt_rules.col_inds = [1, 0]
-        self.assertEqual(self.srt_rules.letts_nums('ENSG000\trs000'),
-                         [['rs', 0], ['ENSG', 0]])
-        self.srt_rules.col_inds = None
+                         ['rs', 10])
+        self.assertEqual(self.srt_rules.letts_nums('ENSG000'),
+                         ['ENSG', 0])
         self.assertRaises(AttributeError,
                           self.srt_rules.letts_nums,
                           'rs')

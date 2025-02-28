@@ -16,7 +16,7 @@ from .err import (NoIdxsError,
 from pyzstd import (SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v3.0.0'
+__version__ = 'v3.1.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023-2025'}]
@@ -25,18 +25,14 @@ __authors__ = [{'name': 'Platon Bykadorov',
 class Prs(Idx):
     def __init__(self,
                  db_file_path: str,
-                 idx_prefix: str,
-                 srt_rule: None | Callable = None,
-                 srt_rule_kwargs: None | dict = None,
-                 srt_rule_cols_delimiter: str | None = '\t',
-                 srt_rule_col_inds: None | int | list | tuple = None):
-        super().__init__(db_file_path,
-                         idx_prefix,
-                         your_line_prs=None,
-                         srt_rule=srt_rule,
-                         srt_rule_kwargs=srt_rule_kwargs,
-                         srt_rule_cols_delimiter=srt_rule_cols_delimiter,
-                         srt_rule_col_inds=srt_rule_col_inds)
+                 idx_name_prefix: str,
+                 idx_srt_rule: Callable,
+                 idx_srt_rule_kwargs: None | dict = None):
+        super().__init__(db_file_path=db_file_path,
+                         idx_name_prefix=idx_name_prefix,
+                         db_line_prs=None,
+                         idx_srt_rule=idx_srt_rule,
+                         idx_srt_rule_kwargs=idx_srt_rule_kwargs)
         self.adb_opened_r = ZipFile(self.adb_path)
         self.db_zst_opened_r = TextIOWrapper(SeekableZstdFile(self.db_zst_path))
         self.idx_names = list(filter(lambda name:
@@ -68,10 +64,10 @@ class Prs(Idx):
                                                    list]:
         if not query_end:
             query_end = query_start
-        prepd_query_start = self.srt_rule(query_start,
-                                          **self.srt_rule_kwargs)
-        prepd_query_end = self.srt_rule(query_end,
-                                        **self.srt_rule_kwargs)
+        prepd_query_start = self.idx_srt_rule(query_start,
+                                              **self.idx_srt_rule_kwargs)
+        prepd_query_end = self.idx_srt_rule(query_end,
+                                            **self.idx_srt_rule_kwargs)
         if prepd_query_start > prepd_query_end:
             raise QueryStartGtEndError(prepd_query_start,
                                        prepd_query_end)

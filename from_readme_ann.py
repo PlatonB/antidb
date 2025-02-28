@@ -9,7 +9,7 @@ from src.antidb.idx import (Idx,
                             count_exec_time)
 from src.antidb.prs import Prs
 
-__version__ = 'v1.1.0'
+__version__ = 'v1.2.0'
 
 
 def parse_dbsnp_line(dbsnp_zst_line):
@@ -21,8 +21,8 @@ def parse_dbsnp_line(dbsnp_zst_line):
 
 def parse_rsmerged_line(rsmerged_zst_line):
     rsmerged_zst_obj = json.loads(rsmerged_zst_line)
-    rsids = list(map(lambda rsid: f'rs{rsid}',
-                     ([rsmerged_zst_obj['refsnp_id']] +
+    rsids = tuple(map(lambda rsid: f'rs{rsid}',
+                      ([rsmerged_zst_obj['refsnp_id']] +
                       rsmerged_zst_obj['merged_snapshot_data']['merged_into'])))
     return rsids
 
@@ -33,7 +33,7 @@ def rsid_to_coords(rsid, dbsnp_prs,
         return dbsnp_zst_line
     for rsmerged_zst_line in rsmerged_prs.eq(rsid):
         rsid_syns = parse_rsmerged_line(rsmerged_zst_line)
-        for dbsnp_zst_line in dbsnp_prs.eq(rsid_syns):
+        for dbsnp_zst_line in dbsnp_prs.eq(*rsid_syns):
             return dbsnp_zst_line
     return None
 
@@ -53,18 +53,22 @@ args = arg_parser.parse_args()
 
 dbsnp_idx = Idx(args.dbsnp_file_path,
                 'rsids__gnomad_cln',
-                parse_dbsnp_line)
+                parse_dbsnp_line,
+                lambda rsid: rsid)
 dbsnp_idx.idx()
 rsmerged_idx = Idx(args.rsmerged_file_path,
                    'rsids',
-                   parse_rsmerged_line)
+                   parse_rsmerged_line,
+                   lambda rsid: rsid)
 rsmerged_idx.idx()
 perf = {'dbsnp_idx': dbsnp_idx.perf,
         'rsmerged_idx': rsmerged_idx.perf}
 dbsnp_prs = Prs(args.dbsnp_file_path,
-                'rsids__gnomad_cln')
+                'rsids__gnomad_cln',
+                lambda rsid: rsid)
 rsmerged_prs = Prs(args.rsmerged_file_path,
-                   'rsids')
+                   'rsids',
+                   lambda rsid: rsid)
 
 
 @count_exec_time
