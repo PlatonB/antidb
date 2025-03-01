@@ -7,10 +7,16 @@ from src.antidb.srt import *
 from src.antidb.idx import *
 from src.antidb.prs import *
 
-__version__ = 'v4.1.0'
+__version__ = 'v4.2.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023-2025'}]
+
+
+def del_files(*file_paths: str) -> None:
+    for file_path in file_paths:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 
 class BedTests(unittest.TestCase):
@@ -39,13 +45,11 @@ class BedTests(unittest.TestCase):
         adb_path = os.path.join(os.getcwd(),
                                 'bed.bed.rsids.adb')
         with open(self.src_file_path, 'w') as src_file_opened:
-            for src_line in self.src_bed:
-                src_file_opened.write(src_line)
+            for src_bed_line in self.src_bed:
+                src_file_opened.write(src_bed_line)
         self.assertTrue(os.path.isfile(self.src_file_path))
-        if os.path.exists(self.db_zst_path):
-            os.remove(self.db_zst_path)
-        if os.path.exists(adb_path):
-            os.remove(adb_path)
+        del_files(self.db_zst_path,
+                  adb_path)
         idx_obj = Idx(db_file_path=self.src_file_path,
                       idx_name_prefix='rsids',
                       db_line_prs=lambda line:
@@ -241,20 +245,18 @@ class BedTests(unittest.TestCase):
                                            query_end)),
                           'rs11900000',
                           'rs4000000')
-        os.remove(self.src_file_path)
-        os.remove(self.db_zst_path)
-        os.remove(adb_path)
+        del_files(self.src_file_path,
+                  self.db_zst_path,
+                  adb_path)
 
     def test_coords(self):
         adb_path = os.path.join(os.getcwd(),
                                 'bed.bed.coords.adb')
         with open(self.src_file_path, 'w') as src_file_opened:
-            for src_line in self.src_bed:
-                src_file_opened.write(src_line)
-        if os.path.exists(self.db_zst_path):
-            os.remove(self.db_zst_path)
-        if os.path.exists(adb_path):
-            os.remove(adb_path)
+            for src_bed_line in self.src_bed:
+                src_file_opened.write(src_bed_line)
+        del_files(self.db_zst_path,
+                  adb_path)
 
         def get_coords(src_bed_line: str):
             src_bed_row = src_bed_line.rstrip().split('\t')
@@ -331,9 +333,113 @@ class BedTests(unittest.TestCase):
                           '1\t92543755\t92543756\trs11804321\n',
                           '1\t92543755\t92543756\trs11804321\n',
                           '1\t92543755\t92543756\trs11804321\n'])
-        os.remove(self.src_file_path)
-        os.remove(self.db_zst_path)
-        os.remove(adb_path)
+        del_files(self.src_file_path,
+                  self.db_zst_path,
+                  adb_path)
+
+    def test_homogen_idx(self):
+        adb_path = os.path.join(os.getcwd(),
+                                'bed.bed.chroms.adb')
+        with open(self.src_file_path, 'w') as src_file_opened:
+            for src_bed_line in self.src_bed:
+                src_file_opened.write(src_bed_line)
+        del_files(self.db_zst_path,
+                  adb_path)
+        idx_obj = Idx(db_file_path=self.src_file_path,
+                      idx_name_prefix='chroms',
+                      db_line_prs=lambda src_bed_line:
+                      src_bed_line.split('\t')[0],
+                      idx_srt_rule=lambda val: val,
+                      presrt_chunk_elems_quan=100,
+                      idx_chunk_elems_quan=100)
+        idx_obj.idx()
+        with ZipFile(adb_path) as adb_opened_r:
+            with ZstdFile(adb_opened_r.open("'1'.idx")) as idx_opened:
+                idx = load(idx_opened)
+                for idx_elem in idx:
+                    self.assertEqual(idx_elem,
+                                     '1')
+                self.assertEqual(len(idx),
+                                 16)
+        prs_obj = Prs(db_file_path=self.src_file_path,
+                      idx_name_prefix='chroms',
+                      idx_srt_rule=lambda val: val)
+        self.assertEqual(prs_obj.idx_names,
+                         ["'1'.idx"])
+        self.assertEqual(prs_obj.idx_begins,
+                         ['1'])
+        self.assertEqual(list(prs_obj.eq('1')),
+                         self.src_bed)
+        self.assertEqual(list(prs_obj.rng('1',
+                                          '1')),
+                         self.src_bed)
+        del_files(self.src_file_path,
+                  self.db_zst_path,
+                  adb_path)
+
+    def test_rsids_by_len(self):
+        adb_path = os.path.join(os.getcwd(),
+                                'bed.bed.rsids_len.adb')
+        with open(self.src_file_path, 'w') as src_file_opened:
+            for src_bed_line in self.src_bed:
+                src_file_opened.write(src_bed_line)
+        del_files(self.db_zst_path,
+                  adb_path)
+        idx_obj = Idx(db_file_path=self.src_file_path,
+                      idx_name_prefix='rsids_len',
+                      db_line_prs=lambda src_bed_line:
+                      len(src_bed_line.split('\t')[3]),
+                      idx_srt_rule=lambda val: val,
+                      presrt_chunk_elems_quan=7,
+                      idx_chunk_elems_quan=3)
+        idx_obj.idx()
+        with ZipFile(adb_path) as adb_opened_r:
+            with ZstdFile(adb_opened_r.open('8.idx')) as fir_idx_opened:
+                fir_idx = load(fir_idx_opened)
+                self.assertEqual(fir_idx[0],
+                                 8)
+                self.assertEqual(fir_idx[1],
+                                 8)
+                self.assertEqual(fir_idx[2],
+                                 8)
+                self.assertEqual(fir_idx[3],
+                                 9)
+                self.assertEqual(len(fir_idx),
+                                 4)
+            with ZstdFile(adb_opened_r.open('9.idx')) as sec_idx_opened:
+                sec_idx = load(sec_idx_opened)
+                self.assertEqual(sec_idx[0],
+                                 9)
+                self.assertEqual(sec_idx[1],
+                                 10)
+                self.assertEqual(sec_idx[2],
+                                 10)
+                self.assertEqual(len(sec_idx),
+                                 3)
+            with ZstdFile(adb_opened_r.open('10.idx')) as thi_idx_opened:
+                thi_idx = load(thi_idx_opened)
+                for thi_idx_elem in thi_idx:
+                    self.assertEqual(thi_idx_elem,
+                                     10)
+                self.assertEqual(len(thi_idx),
+                                 9)
+        prs_obj = Prs(db_file_path=self.src_file_path,
+                      idx_name_prefix='rsids_len',
+                      idx_srt_rule=lambda val: val)
+        self.assertEqual(list(prs_obj.eq(8)),
+                         ['1\t241782991\t241782992\trs952084\n',
+                          '1\t86877126\t86877127\trs581405\n',
+                          '1\t86876786\t86876787\trs479341\n'])
+        self.assertEqual(list(prs_obj.rng(-9, 9)),
+                         ['1\t241782991\t241782992\trs952084\n',
+                          '1\t86877126\t86877127\trs581405\n',
+                          '1\t86876786\t86876787\trs479341\n',
+                          '1\t154527612\t154527613\trs4131514\n',
+                          '1\t66265029\t66265030\trs1321172\n'])
+        self.assertFalse(list(prs_obj.eq(11)))
+        del_files(self.src_file_path,
+                  self.db_zst_path,
+                  adb_path)
 
 
 class SrtRulesTests(unittest.TestCase):

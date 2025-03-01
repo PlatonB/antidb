@@ -16,7 +16,7 @@ from .err import (NoIdxsError,
 from pyzstd import (SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v3.1.0'
+__version__ = 'v3.1.1'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023-2025'}]
@@ -83,8 +83,12 @@ class Prs(Idx):
             neces_idx_names = []
         else:
             neces_idx_begins = self.idx_begins[start_idx_ind:end_idx_ind + 1]
-            neces_idx_names = [f'{neces_idx_begin}.idx'
-                               for neces_idx_begin in neces_idx_begins]
+            neces_idx_names = []
+            for neces_idx_begin in neces_idx_begins:
+                if type(neces_idx_begin) is str:
+                    neces_idx_names.append(f"'{neces_idx_begin}'.idx")
+                else:
+                    neces_idx_names.append(f'{neces_idx_begin}.idx')
         return (prepd_query_bords,
                 neces_idx_names)
 

@@ -6,6 +6,7 @@ from typing import (Callable,
                     Any,
                     Generator)
 from datetime import datetime
+from copy import deepcopy
 from zipfile import ZipFile
 from tempfile import TemporaryFile
 from pickle import (dump,
@@ -18,7 +19,7 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v3.2.0'
+__version__ = 'v3.3.0'
 __authors__ = [{'name': 'Platon Bykadorov',
                 'email': 'platon.work@gmail.com',
                 'years': '2023-2025'}]
@@ -51,7 +52,7 @@ class Idx(SrtRules):
         super().__init__()
         self.db_file_path = os.path.normpath(db_file_path)
         if self.db_file_path.endswith('.zst'):
-            self.db_zst_path = self.db_file_path[:]
+            self.db_zst_path = deepcopy(self.db_file_path)
             self.adb_path = f'{self.db_file_path[:-4]}.{idx_name_prefix}.adb'
         else:
             self.db_zst_path = self.db_file_path + '.zst'
@@ -123,14 +124,17 @@ class Idx(SrtRules):
                 srtd_chunk: list,
                 srtd_line_starts: list,
                 adb_opened_w: ZipFile) -> None:
-        with ZstdFile(adb_opened_w.open(f'{srtd_chunk[0]}.idx',
+        fir_chunk_elem = srtd_chunk[0]
+        if type(fir_chunk_elem) is str:
+            fir_chunk_elem = f"'{fir_chunk_elem}'"
+        with ZstdFile(adb_opened_w.open(f'{fir_chunk_elem}.idx',
                                         mode='w'),
                       mode='w',
                       level_or_option=self.compr_settings) as idx_opened:
             dump(srtd_chunk,
                  idx_opened,
                  HIGHEST_PROTOCOL)
-        with ZstdFile(adb_opened_w.open(f'{srtd_chunk[0]}.b',
+        with ZstdFile(adb_opened_w.open(f'{fir_chunk_elem}.b',
                                         mode='w'),
                       mode='w',
                       level_or_option=self.compr_settings) as b_opened:
@@ -145,7 +149,8 @@ class Idx(SrtRules):
                               self.presrtd_idxs_opened)):
             srtd_chunk.append(obj[0])
             srtd_line_starts.append(obj[1])
-            if len(srtd_chunk) == self.idx_chunk_elems_quan:
+            if len(srtd_chunk) >= self.idx_chunk_elems_quan \
+                    and srtd_chunk[-1] != srtd_chunk[0]:
                 self.crt_idx(srtd_chunk,
                              srtd_line_starts,
                              adb_opened_w)
