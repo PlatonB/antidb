@@ -20,7 +20,7 @@ from pyzstd import (CParameter,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v3.3.2'
+    __version__ = 'v3.3.3'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -45,7 +45,7 @@ class Idx(SrtRules):
                  idx_srt_rule: Callable,
                  db_line_prs_kwargs: None | dict = None,
                  idx_srt_rule_kwargs: None | dict = None,
-                 compr_level: int = 6,
+                 compr_level: int = 3,
                  compr_frame_size: int = 1024 * 1024,
                  compr_chunk_size: int = 1024 * 1024 * 1024,
                  presrt_chunk_elems_quan: int = 10000000,

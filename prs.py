@@ -17,7 +17,7 @@ from pyzstd import (SeekableZstdFile,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v3.2.1'
+    __version__ = 'v3.3.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -66,9 +66,8 @@ class Prs(Idx):
 
     def prep_query(self,
                    query_start: Any,
-                   query_end: Any = None) -> tuple[list[Any,
-                                                        Any],
-                                                   list]:
+                   query_end: Any = None) -> list[Any,
+                                                  Any]:
         if not query_end:
             query_end = query_start
         prepd_query_start = self.idx_srt_rule(query_start,
@@ -80,12 +79,17 @@ class Prs(Idx):
                                        prepd_query_end)
         prepd_query_bords = [prepd_query_start,
                              prepd_query_end]
+        return prepd_query_bords
+
+    def select_idx_names(self,
+                         prepd_query_bords: list[Any,
+                                                 Any]) -> list:
         start_idx_ind = bisect_left(self.idx_begins,
-                                    prepd_query_start) - 1
+                                    prepd_query_bords[0]) - 1
         if start_idx_ind < 0:
             start_idx_ind = 0
         end_idx_ind = bisect_right(self.idx_begins,
-                                   prepd_query_end) - 1
+                                   prepd_query_bords[1]) - 1
         if end_idx_ind < 0:
             neces_idx_names = []
         else:
@@ -96,13 +100,13 @@ class Prs(Idx):
                     neces_idx_names.append(f"'{neces_idx_begin}'.idx")
                 else:
                     neces_idx_names.append(f'{neces_idx_begin}.idx')
-        return (prepd_query_bords,
-                neces_idx_names)
+        return neces_idx_names
 
     def eq(self,
            *queries: Any) -> Generator:
         for query in queries:
-            prepd_query_bords, neces_idx_names = self.prep_query(query)
+            prepd_query_bords = self.prep_query(query)
+            neces_idx_names = self.select_idx_names(prepd_query_bords)
             for neces_idx_name in neces_idx_names:
                 neces_idx = self.read_idx(neces_idx_name)
                 neces_line_starts = self.read_idx(f'{neces_idx_name[:-4]}.b')
@@ -124,8 +128,9 @@ class Prs(Idx):
     def rng(self,
             query_start: Any,
             query_end: Any) -> Generator:
-        prepd_query_bords, neces_idx_names = self.prep_query(query_start,
-                                                             query_end)
+        prepd_query_bords = self.prep_query(query_start,
+                                            query_end)
+        neces_idx_names = self.select_idx_names(prepd_query_bords)
         for neces_idx_name in neces_idx_names:
             neces_idx = self.read_idx(neces_idx_name)
             neces_line_starts = self.read_idx(f'{neces_idx_name[:-4]}.b')
