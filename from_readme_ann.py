@@ -10,7 +10,7 @@ from idx import (Idx,
 from prs import Prs
 
 if __name__ == '__main__':
-    __version__ = 'v1.3.0'
+    __version__ = 'v1.3.1'
 
 
 def prs_dbsnp_line(dbsnp_zst_line: str) -> str | None:
@@ -102,7 +102,7 @@ if __name__ == '__main__':
                       res_files_crt_time,
                       dbsnp_prs_obj,
                       rsmerged_prs_obj,
-                      prs_rsmerged_line)[1]
+                      prs_rsmerged_line)[2]
     perf_file_path = os.path.join(args.trg_dir_path,
                                   f'ann_perf_{res_files_crt_time}.json')
     with open(perf_file_path, 'w') as perf_file_opened:
