@@ -19,10 +19,11 @@ from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v3.3.0'
-__authors__ = [{'name': 'Platon Bykadorov',
-                'email': 'platon.work@gmail.com',
-                'years': '2023-2025'}]
+if __name__ == 'main':
+    __version__ = 'v3.3.1'
+    __authors__ = [{'name': 'Platon Bykadorov',
+                    'email': 'platon.work@gmail.com',
+                    'years': '2023-2025'}]
 
 
 def count_exec_time(any_func: Callable) -> Callable:

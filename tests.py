@@ -7,10 +7,11 @@ from src.antidb.srt import *
 from src.antidb.idx import *
 from src.antidb.prs import *
 
-__version__ = 'v4.2.0'
-__authors__ = [{'name': 'Platon Bykadorov',
-                'email': 'platon.work@gmail.com',
-                'years': '2023-2025'}]
+if __name__ == 'main':
+    __version__ = 'v4.2.1'
+    __authors__ = [{'name': 'Platon Bykadorov',
+                    'email': 'platon.work@gmail.com',
+                    'years': '2023-2025'}]
 
 
 def del_files(*file_paths: str) -> None:
@@ -165,6 +166,14 @@ class BedTests(unittest.TestCase):
         prs_obj = Prs(db_file_path=self.src_file_path,
                       idx_name_prefix='rsids',
                       idx_srt_rule=SrtRules.natur)
+        self.assertEqual(prs_obj.read_idx("[[inf, 'rs', 479341]].idx"),
+                         fir_idx)
+        self.assertEqual(prs_obj.read_idx("[[inf, 'rs', 10903122]].idx"),
+                         sec_idx)
+        self.assertEqual(prs_obj.read_idx("[[inf, 'rs', 11804321]].idx"),
+                         thi_idx)
+        self.assertEqual(prs_obj.read_idx("[[inf, 'rs', 17380378]].idx"),
+                         fou_idx)
         self.assertEqual(list(prs_obj.eq('rs12044852')),
                          ['1\t116545156\t116545157\trs12044852\n'])
         self.assertEqual(list(prs_obj.eq('rs952084')),

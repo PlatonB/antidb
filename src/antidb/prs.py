@@ -16,10 +16,11 @@ from .err import (NoIdxsError,
 from pyzstd import (SeekableZstdFile,
                     ZstdFile)
 
-__version__ = 'v3.1.1'
-__authors__ = [{'name': 'Platon Bykadorov',
-                'email': 'platon.work@gmail.com',
-                'years': '2023-2025'}]
+if __name__ == 'main':
+    __version__ = 'v3.2.0'
+    __authors__ = [{'name': 'Platon Bykadorov',
+                    'email': 'platon.work@gmail.com',
+                    'years': '2023-2025'}]
 
 
 class Prs(Idx):
@@ -45,7 +46,7 @@ class Prs(Idx):
                                      self.idx_names))
         self.meta = self.read_meta()
 
-    def read_meta(self):
+    def read_meta(self) -> dict:
         with TextIOWrapper(self.adb_opened_r.open('meta.txt')) as meta_opened:
             meta = {}
             for key_val in meta_opened.readlines():
@@ -56,6 +57,12 @@ class Prs(Idx):
                         SyntaxError):
                     meta[key] = val
         return meta
+
+    def read_idx(self,
+                 idx_name: str) -> list:
+        with ZstdFile(self.adb_opened_r.open(idx_name)) as idx_opened:
+            idx = load(idx_opened)
+            return idx
 
     def prep_query(self,
                    query_start: Any,
@@ -97,10 +104,8 @@ class Prs(Idx):
         for query in queries:
             prepd_query_bords, neces_idx_names = self.prep_query(query)
             for neces_idx_name in neces_idx_names:
-                with ZstdFile(self.adb_opened_r.open(neces_idx_name)) as neces_idx_opened:
-                    neces_idx = load(neces_idx_opened)
-                with ZstdFile(self.adb_opened_r.open(f'{neces_idx_name[:-4]}.b')) as neces_b_opened:
-                    neces_line_starts = load(neces_b_opened)
+                neces_idx = self.read_idx(neces_idx_name)
+                neces_line_starts = self.read_idx(f'{neces_idx_name[:-4]}.b')
                 start_idxval_ind = bisect_left(neces_idx,
                                                prepd_query_bords[0])
                 if start_idxval_ind == len(neces_idx) \
@@ -122,10 +127,8 @@ class Prs(Idx):
         prepd_query_bords, neces_idx_names = self.prep_query(query_start,
                                                              query_end)
         for neces_idx_name in neces_idx_names:
-            with ZstdFile(self.adb_opened_r.open(neces_idx_name)) as neces_idx_opened:
-                neces_idx = load(neces_idx_opened)
-            with ZstdFile(self.adb_opened_r.open(f'{neces_idx_name[:-4]}.b')) as neces_b_opened:
-                neces_line_starts = load(neces_b_opened)
+            neces_idx = self.read_idx(neces_idx_name)
+            neces_line_starts = self.read_idx(f'{neces_idx_name[:-4]}.b')
             start_idxval_ind = bisect_left(neces_idx,
                                            prepd_query_bords[0])
             if start_idxval_ind == len(neces_idx):

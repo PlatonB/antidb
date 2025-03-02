@@ -1,10 +1,11 @@
 import re
 from collections.abc import Iterable
 
-__version__ = 'v5.0.0'
-__authors__ = [{'name': 'Platon Bykadorov',
-                'email': 'platon.work@gmail.com',
-                'years': '2023-2025'}]
+if __name__ == 'main':
+    __version__ = 'v5.0.1'
+    __authors__ = [{'name': 'Platon Bykadorov',
+                    'email': 'platon.work@gmail.com',
+                    'years': '2023-2025'}]
 
 
 class SrtRules():

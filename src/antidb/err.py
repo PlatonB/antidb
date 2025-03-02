@@ -1,7 +1,8 @@
-__version__ = 'v1.1.0'
-__authors__ = [{'name': 'Platon Bykadorov',
-                'email': 'platon.work@gmail.com',
-                'years': '2025'}]
+if __name__ == 'main':
+    __version__ = 'v1.1.1'
+    __authors__ = [{'name': 'Platon Bykadorov',
+                    'email': 'platon.work@gmail.com',
+                    'years': '2025'}]
 
 
 class NoIdxsError(Exception):
