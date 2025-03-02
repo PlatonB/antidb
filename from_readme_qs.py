@@ -1,8 +1,8 @@
-from src.antidb.idx import (Idx,
-                            count_exec_time)
-from src.antidb.prs import Prs
+from idx import (Idx,
+                 count_exec_time)
+from prs import Prs
 
-__version__ = 'v1.2.0'
+__version__ = 'v1.2.1'
 
 dbsnp_vcf_path = '/path/to/GCF_000001405.40[.zst]'
 dbsnp_idx_prefix = 'all_rsids'

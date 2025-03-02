@@ -10,14 +10,14 @@ from io import TextIOWrapper
 from math import inf
 from bisect import (bisect_left,
                     bisect_right)
-from .idx import Idx
-from .err import (NoIdxsError,
-                  QueryStartGtEndError)
+from idx import Idx
+from err import (NoIdxsError,
+                 QueryStartGtEndError)
 from pyzstd import (SeekableZstdFile,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v3.2.0'
+    __version__ = 'v3.2.1'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
