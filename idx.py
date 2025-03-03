@@ -20,7 +20,7 @@ from pyzstd import (CParameter,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v3.3.3'
+    __version__ = 'v3.4.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -122,20 +122,21 @@ class Idx(SrtRules):
             yield obj
 
     def crt_idx(self,
+                name_dupl_num: int,
                 srtd_chunk: list,
                 srtd_line_starts: list,
                 adb_opened_w: ZipFile) -> None:
         fir_chunk_elem = srtd_chunk[0]
         if type(fir_chunk_elem) is str:
             fir_chunk_elem = f"'{fir_chunk_elem}'"
-        with ZstdFile(adb_opened_w.open(f'{fir_chunk_elem}.idx',
+        with ZstdFile(adb_opened_w.open(f'{fir_chunk_elem}.{name_dupl_num}.idx',
                                         mode='w'),
                       mode='w',
                       level_or_option=self.compr_settings) as idx_opened:
             dump(srtd_chunk,
                  idx_opened,
                  HIGHEST_PROTOCOL)
-        with ZstdFile(adb_opened_w.open(f'{fir_chunk_elem}.b',
+        with ZstdFile(adb_opened_w.open(f'{fir_chunk_elem}.{name_dupl_num}.b',
                                         mode='w'),
                       mode='w',
                       level_or_option=self.compr_settings) as b_opened:
@@ -146,19 +147,30 @@ class Idx(SrtRules):
     def crt_idxs(self,
                  adb_opened_w: ZipFile) -> None:
         srtd_chunk, srtd_line_starts = [], []
+        prev_srtd_chunk_start = None
         for obj in merge(*map(self.read_presrtd_idx,
                               self.presrtd_idxs_opened)):
             srtd_chunk.append(obj[0])
             srtd_line_starts.append(obj[1])
-            if len(srtd_chunk) >= self.idx_chunk_elems_quan \
-                    and srtd_chunk[-1] != srtd_chunk[0]:
-                self.crt_idx(srtd_chunk,
+            if len(srtd_chunk) == self.idx_chunk_elems_quan:
+                if srtd_chunk[0] != prev_srtd_chunk_start:
+                    name_dupl_num = 0
+                else:
+                    name_dupl_num += 1
+                self.crt_idx(name_dupl_num,
+                             srtd_chunk,
                              srtd_line_starts,
                              adb_opened_w)
+                prev_srtd_chunk_start = srtd_chunk[0]
                 srtd_chunk.clear()
                 srtd_line_starts.clear()
         if srtd_chunk:
-            self.crt_idx(srtd_chunk,
+            if srtd_chunk[0] != prev_srtd_chunk_start:
+                name_dupl_num = 0
+            else:
+                name_dupl_num += 1
+            self.crt_idx(name_dupl_num,
+                         srtd_chunk,
                          srtd_line_starts,
                          adb_opened_w)
 

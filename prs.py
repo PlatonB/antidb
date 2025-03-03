@@ -17,7 +17,7 @@ from pyzstd import (SeekableZstdFile,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v3.3.0'
+    __version__ = 'v3.4.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -42,7 +42,7 @@ class Prs(Idx):
         if not self.idx_names:
             raise NoIdxsError()
         self.idx_begins = sorted(map(lambda idx_name:
-                                     eval(idx_name[:-4]),
+                                     eval(idx_name[:-4].split('.')[0]),
                                      self.idx_names))
         self.meta = self.read_meta()
 
@@ -96,10 +96,17 @@ class Prs(Idx):
             neces_idx_begins = self.idx_begins[start_idx_ind:end_idx_ind + 1]
             neces_idx_names = []
             for neces_idx_begin in neces_idx_begins:
-                if type(neces_idx_begin) is str:
-                    neces_idx_names.append(f"'{neces_idx_begin}'.idx")
-                else:
-                    neces_idx_names.append(f'{neces_idx_begin}.idx')
+                name_dupl_num = 0
+                while True:
+                    if type(neces_idx_begin) is str:
+                        neces_idx_name = f"'{neces_idx_begin}'.{name_dupl_num}.idx"
+                    else:
+                        neces_idx_name = f'{neces_idx_begin}.{name_dupl_num}.idx'
+                    if neces_idx_name in self.idx_names:
+                        neces_idx_names.append(neces_idx_name)
+                        name_dupl_num += 1
+                    else:
+                        break
         return neces_idx_names
 
     def eq(self,
