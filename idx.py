@@ -20,7 +20,7 @@ from pyzstd import (CParameter,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v3.4.0'
+    __version__ = 'v3.5.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -216,9 +216,31 @@ class Idx(SrtRules):
         with ZipFile(self.adb_path,
                      mode='w') as adb_opened_w:
             self.crt_idxs(adb_opened_w)
-            with TextIOWrapper(adb_opened_w.open('meta.txt',
-                                                 mode='w')) as meta_opened:
-                meta_opened.write(f'db_line_prs_name={self.db_line_prs.__name__}\n')
-                meta_opened.write(f'db_line_prs_kwargs={self.db_line_prs_kwargs}\n')
-                meta_opened.write(f'idx_srt_rule_name={self.idx_srt_rule.__name__}\n')
-                meta_opened.write(f'idx_srt_rule_kwargs={self.idx_srt_rule_kwargs}\n')
+
+# def r(d):
+#     for k in list(d):
+#         if type(d[k]) is dict:
+#             for i in r(d[k]):
+#                 yield f'{k}/{i}'
+#         else:
+#             yield f'{k}/{",".join(map(str,
+#                                       d[k]))}'
+
+
+# d = {'a1': {'b2': {'c3': {'d4': [0, 1, 2],
+#                           'e4': [3, 4, 5]},
+#                    'f3': {'g4': [6, 7, 8],
+#                           'h4': [9, 10, 11]}},
+#             'i2': {'j3': {'k4': [0, 1, 2],
+#                           'l4': [3, 4, 5]},
+#                    'm3': {'n4': [6, 7, 8],
+#                           'o4': [9, 10, 11]}}}}
+
+# ['a1/b2/c3/d4/0,1,2',
+#  'a1/b2/c3/e4/3,4,5',
+#  'a1/b2/f3/g4/6,7,8',
+#  'a1/b2/f3/h4/9,10,11',
+#  'a1/i2/j3/k4/0,1,2',
+#  'a1/i2/j3/l4/3,4,5',
+#  'a1/i2/m3/n4/6,7,8',
+#  'a1/i2/m3/o4/9,10,11']

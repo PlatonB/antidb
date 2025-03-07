@@ -7,7 +7,7 @@ from idx import *
 from prs import *
 
 if __name__ == 'main':
-    __version__ = 'v4.3.0'
+    __version__ = 'v4.3.1'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -111,9 +111,8 @@ class BedTests(unittest.TestCase):
                                'rs', 17380378]])
             self.assertEqual(len(srtd_idx_begins),
                              4)
-            self.assertTrue('meta.txt' in adb_content)
             self.assertEqual(len(adb_content),
-                             9)
+                             8)
             with ZstdFile(adb_opened_r.open("[[inf, 'rs', 479341]].0.idx")) as fir_idx_opened:
                 fir_idx = load(fir_idx_opened)
                 self.assertEqual(fir_idx[0],

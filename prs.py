@@ -17,7 +17,7 @@ from pyzstd import (SeekableZstdFile,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v3.4.0'
+    __version__ = 'v3.5.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -44,19 +44,6 @@ class Prs(Idx):
         self.idx_begins = sorted(map(lambda idx_name:
                                      eval(idx_name[:-4].split('.')[0]),
                                      self.idx_names))
-        self.meta = self.read_meta()
-
-    def read_meta(self) -> dict:
-        with TextIOWrapper(self.adb_opened_r.open('meta.txt')) as meta_opened:
-            meta = {}
-            for key_val in meta_opened.readlines():
-                key, val = key_val[:-1].split('=')
-                try:
-                    meta[key] = eval(val)
-                except (NameError,
-                        SyntaxError):
-                    meta[key] = val
-        return meta
 
     def read_idx(self,
                  idx_name: str) -> list:
