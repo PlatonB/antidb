@@ -7,7 +7,7 @@ from idx import *
 from prs import *
 
 if __name__ == 'main':
-    __version__ = 'v4.3.1'
+    __version__ = 'v4.4.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -64,36 +64,35 @@ class BedTests(unittest.TestCase):
         self.assertTrue(os.path.isfile(adb_path))
         with ZipFile(adb_path) as adb_opened_r:
             adb_content = adb_opened_r.namelist()
-            idx_names = []
+            idx_paths = []
             idx_begins = []
             b_names = []
-            for file_name in adb_content:
-                if file_name.endswith('.idx'):
-                    idx_names.append(file_name)
-                    idx_begins.append(eval(file_name.replace('.0.idx',
-                                                             '')))
-                elif file_name.endswith('.b'):
-                    b_names.append(file_name)
-            srtd_idx_names = sorted(idx_names)
-            self.assertEqual(srtd_idx_names[0],
-                             "[[inf, 'rs', 10903122]].0.idx")
-            self.assertEqual(srtd_idx_names[1],
-                             "[[inf, 'rs', 11804321]].0.idx")
-            self.assertEqual(srtd_idx_names[2],
-                             "[[inf, 'rs', 17380378]].0.idx")
-            self.assertEqual(srtd_idx_names[3],
-                             "[[inf, 'rs', 479341]].0.idx")
-            self.assertEqual(len(srtd_idx_names),
+            for file_path in adb_content:
+                if file_path.endswith('.idx'):
+                    idx_paths.append(file_path)
+                    idx_begins.append(eval(os.path.basename(file_path.replace('.idx', ''))))
+                elif file_path.endswith('.b'):
+                    b_names.append(file_path)
+            srtd_idx_paths = sorted(idx_paths)
+            self.assertEqual(srtd_idx_paths[0],
+                             "[[inf, 'rs', 10903122]].1/[[inf, 'rs', 10903122]].idx")
+            self.assertEqual(srtd_idx_paths[1],
+                             "[[inf, 'rs', 11804321]].1/[[inf, 'rs', 11804321]].idx")
+            self.assertEqual(srtd_idx_paths[2],
+                             "[[inf, 'rs', 17380378]].1/[[inf, 'rs', 17380378]].idx")
+            self.assertEqual(srtd_idx_paths[3],
+                             "[[inf, 'rs', 479341]].1/[[inf, 'rs', 479341]].idx")
+            self.assertEqual(len(srtd_idx_paths),
                              4)
             srtd_b_names = sorted(b_names)
             self.assertEqual(srtd_b_names[0],
-                             "[[inf, 'rs', 10903122]].0.b")
+                             "[[inf, 'rs', 10903122]].1/[[inf, 'rs', 10903122]].b")
             self.assertEqual(srtd_b_names[1],
-                             "[[inf, 'rs', 11804321]].0.b")
+                             "[[inf, 'rs', 11804321]].1/[[inf, 'rs', 11804321]].b")
             self.assertEqual(srtd_b_names[2],
-                             "[[inf, 'rs', 17380378]].0.b")
+                             "[[inf, 'rs', 17380378]].1/[[inf, 'rs', 17380378]].b")
             self.assertEqual(srtd_b_names[3],
-                             "[[inf, 'rs', 479341]].0.b")
+                             "[[inf, 'rs', 479341]].1/[[inf, 'rs', 479341]].b")
             self.assertEqual(len(srtd_b_names),
                              4)
             srtd_idx_begins = sorted(idx_begins)
@@ -112,8 +111,9 @@ class BedTests(unittest.TestCase):
             self.assertEqual(len(srtd_idx_begins),
                              4)
             self.assertEqual(len(adb_content),
-                             8)
-            with ZstdFile(adb_opened_r.open("[[inf, 'rs', 479341]].0.idx")) as fir_idx_opened:
+                             12)
+            fir_idx_path = "[[inf, 'rs', 479341]].1/[[inf, 'rs', 479341]].idx"
+            with ZstdFile(adb_opened_r.open(fir_idx_path)) as fir_idx_opened:
                 fir_idx = load(fir_idx_opened)
                 self.assertEqual(fir_idx[0],
                                  [[inf, 'rs', 479341]])
@@ -127,7 +127,8 @@ class BedTests(unittest.TestCase):
                                  [[inf, 'rs', 4131514]])
                 self.assertEqual(len(fir_idx),
                                  5)
-            with ZstdFile(adb_opened_r.open("[[inf, 'rs', 10903122]].0.idx")) as sec_idx_opened:
+            sec_idx_path = "[[inf, 'rs', 10903122]].1/[[inf, 'rs', 10903122]].idx"
+            with ZstdFile(adb_opened_r.open(sec_idx_path)) as sec_idx_opened:
                 sec_idx = load(sec_idx_opened)
                 self.assertEqual(sec_idx[0],
                                  [[inf, 'rs', 10903122]])
@@ -141,7 +142,8 @@ class BedTests(unittest.TestCase):
                                  [[inf, 'rs', 11804321]])
                 self.assertEqual(len(sec_idx),
                                  5)
-            with ZstdFile(adb_opened_r.open("[[inf, 'rs', 11804321]].0.idx")) as thi_idx_opened:
+            thi_idx_path = "[[inf, 'rs', 11804321]].1/[[inf, 'rs', 11804321]].idx"
+            with ZstdFile(adb_opened_r.open(thi_idx_path)) as thi_idx_opened:
                 thi_idx = load(thi_idx_opened)
                 self.assertEqual(thi_idx[0],
                                  [[inf, 'rs', 11804321]])
@@ -155,7 +157,8 @@ class BedTests(unittest.TestCase):
                                  [[inf, 'rs', 17371561]])
                 self.assertEqual(len(thi_idx),
                                  5)
-            with ZstdFile(adb_opened_r.open("[[inf, 'rs', 17380378]].0.idx")) as fou_idx_opened:
+            fou_idx_path = "[[inf, 'rs', 17380378]].1/[[inf, 'rs', 17380378]].idx"
+            with ZstdFile(adb_opened_r.open(fou_idx_path)) as fou_idx_opened:
                 fou_idx = load(fou_idx_opened)
                 self.assertEqual(fou_idx[0],
                                  [[inf, 'rs', 17380378]])
@@ -164,13 +167,13 @@ class BedTests(unittest.TestCase):
         prs_obj = Prs(db_file_path=self.src_file_path,
                       idx_name_prefix='rsids',
                       idx_srt_rule=SrtRules.natur)
-        self.assertEqual(prs_obj.read_idx("[[inf, 'rs', 479341]].0.idx"),
+        self.assertEqual(prs_obj.read_idx("[[inf, 'rs', 479341]].1/[[inf, 'rs', 479341]].idx"),
                          fir_idx)
-        self.assertEqual(prs_obj.read_idx("[[inf, 'rs', 10903122]].0.idx"),
+        self.assertEqual(prs_obj.read_idx("[[inf, 'rs', 10903122]].1/[[inf, 'rs', 10903122]].idx"),
                          sec_idx)
-        self.assertEqual(prs_obj.read_idx("[[inf, 'rs', 11804321]].0.idx"),
+        self.assertEqual(prs_obj.read_idx("[[inf, 'rs', 11804321]].1/[[inf, 'rs', 11804321]].idx"),
                          thi_idx)
-        self.assertEqual(prs_obj.read_idx("[[inf, 'rs', 17380378]].0.idx"),
+        self.assertEqual(prs_obj.read_idx("[[inf, 'rs', 17380378]].1/[[inf, 'rs', 17380378]].idx"),
                          fou_idx)
         self.assertEqual(list(prs_obj.eq('rs12044852')),
                          ['1\t116545156\t116545157\trs12044852\n'])
@@ -280,7 +283,8 @@ class BedTests(unittest.TestCase):
                       idx_chunk_elems_quan=8)
         idx_obj.idx()
         with ZipFile(adb_path) as adb_opened_r:
-            with ZstdFile(adb_opened_r.open("['chr1', 24977084, 24977085].0.idx")) as fir_idx_opened:
+            fir_idx_path = "['chr1', 24977084, 24977085].1/['chr1', 24977084, 24977085].idx"
+            with ZstdFile(adb_opened_r.open(fir_idx_path)) as fir_idx_opened:
                 fir_idx = load(fir_idx_opened)
                 self.assertEqual(fir_idx[0],
                                  ['chr1', 24977084, 24977085])
@@ -300,7 +304,8 @@ class BedTests(unittest.TestCase):
                                  ['chr1', 92543755, 92543756])
                 self.assertEqual(len(fir_idx),
                                  8)
-            with ZstdFile(adb_opened_r.open("['chr1', 92543755, 92543756].0.idx")) as sec_idx_opened:
+            sec_idx_path = "['chr1', 92543755, 92543756].1/['chr1', 92543755, 92543756].idx"
+            with ZstdFile(adb_opened_r.open(sec_idx_path)) as sec_idx_opened:
                 sec_idx = load(sec_idx_opened)
                 self.assertEqual(sec_idx[0],
                                  ['chr1', 92543755, 92543756])
@@ -361,7 +366,8 @@ class BedTests(unittest.TestCase):
                       idx_chunk_elems_quan=100)
         idx_obj.idx()
         with ZipFile(adb_path) as adb_opened_r:
-            with ZstdFile(adb_opened_r.open("'1'.0.idx")) as idx_opened:
+            idx_path = "'1'.1/'1'.idx"
+            with ZstdFile(adb_opened_r.open(idx_path)) as idx_opened:
                 idx = load(idx_opened)
                 for idx_elem in idx:
                     self.assertEqual(idx_elem,
@@ -371,9 +377,9 @@ class BedTests(unittest.TestCase):
         prs_obj = Prs(db_file_path=self.src_file_path,
                       idx_name_prefix='chroms',
                       idx_srt_rule=lambda val: val)
-        self.assertEqual(prs_obj.idx_names,
-                         ["'1'.0.idx"])
-        self.assertEqual(prs_obj.idx_begins,
+        self.assertEqual(prs_obj.top_dir_names,
+                         ["'1'.1/"])
+        self.assertEqual(prs_obj.top_chunk_begins,
                          ['1'])
         self.assertEqual(list(prs_obj.eq('1')),
                          self.src_bed)
@@ -397,57 +403,69 @@ class BedTests(unittest.TestCase):
                       db_line_prs=lambda src_bed_line:
                       len(src_bed_line.split('\t')[3]),
                       idx_srt_rule=lambda val: val,
-                      presrt_chunk_elems_quan=7,
+                      presrt_chunk_elems_quan=8,
                       idx_chunk_elems_quan=3)
         idx_obj.idx()
+        self.assertEqual(sorted(self.src_bed,
+                                key=lambda line:
+                                len(line.rstrip().split('\t')[-1])),
+                         ['1\t241782991\t241782992\trs952084\n',
+                          '1\t86877126\t86877127\trs581405\n',
+                          '1\t86876786\t86876787\trs479341\n',
+                          '1\t154527612\t154527613\trs4131514\n',
+                          '1\t66265029\t66265030\trs1321172\n',
+                          '1\t116545156\t116545157\trs12044852\n',
+                          '1\t201015351\t201015352\trs12122721\n',
+                          '1\t92515681\t92515682\trs17371561\n',
+                          '1\t92543755\t92543756\trs11804321\n',
+                          '1\t92580419\t92580420\trs17380378\n',
+                          '1\t24977084\t24977085\trs10903122\n',
+                          '1\t92516860\t92516861\trs11581176\n',
+                          '1\t92543755\t92543756\trs11804321\n',
+                          '1\t92516860\t92516861\trs11581176\n',
+                          '1\t237115473\t237115474\trs10925318\n',
+                          '1\t92543755\t92543756\trs11804321\n'])
         with ZipFile(adb_path) as adb_opened_r:
-            with ZstdFile(adb_opened_r.open('8.0.idx')) as fir_idx_opened:
+            fir_idx_path = '8.1/8.1/8.1/8.idx'
+            with ZstdFile(adb_opened_r.open(fir_idx_path)) as fir_idx_opened:
                 fir_idx = load(fir_idx_opened)
-                self.assertEqual(fir_idx[0],
-                                 8)
-                self.assertEqual(fir_idx[1],
-                                 8)
-                self.assertEqual(fir_idx[2],
-                                 8)
-                self.assertEqual(len(fir_idx),
-                                 3)
-            with ZstdFile(adb_opened_r.open('9.0.idx')) as sec_idx_opened:
+                self.assertEqual(fir_idx,
+                                 [8, 8])
+            sec_idx_path = '8.1/8.1/8.2/8.idx'
+            with ZstdFile(adb_opened_r.open(sec_idx_path)) as sec_idx_opened:
                 sec_idx = load(sec_idx_opened)
-                self.assertEqual(sec_idx[0],
-                                 9)
-                self.assertEqual(sec_idx[1],
-                                 9)
-                self.assertEqual(sec_idx[2],
-                                 10)
-                self.assertEqual(len(sec_idx),
-                                 3)
-            with ZstdFile(adb_opened_r.open('10.0.idx')) as thi_idx_opened:
+                self.assertEqual(sec_idx,
+                                 [8, 9])
+            thi_idx_path = '8.1/9.2/9.1/9.idx'
+            with ZstdFile(adb_opened_r.open(thi_idx_path)) as thi_idx_opened:
                 thi_idx = load(thi_idx_opened)
-                for thi_idx_elem in thi_idx:
-                    self.assertEqual(thi_idx_elem,
-                                     10)
-                self.assertEqual(len(thi_idx),
-                                 3)
-            with ZstdFile(adb_opened_r.open('10.1.idx')) as fou_idx_opened:
+                self.assertEqual(thi_idx,
+                                 [9, 10])
+            fou_idx_path = '8.1/9.2/10.2/10.idx'
+            with ZstdFile(adb_opened_r.open(fou_idx_path)) as fou_idx_opened:
                 fou_idx = load(fou_idx_opened)
-                for fou_idx_elem in fou_idx:
-                    self.assertEqual(fou_idx_elem,
-                                     10)
-                self.assertEqual(len(fou_idx),
-                                 3)
-            with ZstdFile(adb_opened_r.open('10.2.idx')) as fiv_idx_opened:
+                self.assertEqual(fou_idx,
+                                 [10, 10])
+            fiv_idx_path = '10.1/10.1/10.1/10.idx'
+            with ZstdFile(adb_opened_r.open(fiv_idx_path)) as fiv_idx_opened:
                 fiv_idx = load(fiv_idx_opened)
-                for fiv_idx_elem in fiv_idx:
-                    self.assertEqual(fiv_idx_elem,
-                                     10)
-                self.assertEqual(len(fiv_idx),
-                                 3)
-            with ZstdFile(adb_opened_r.open('10.3.idx')) as six_idx_opened:
+                self.assertEqual(fiv_idx,
+                                 [10, 10])
+            six_idx_path = '10.1/10.1/10.2/10.idx'
+            with ZstdFile(adb_opened_r.open(six_idx_path)) as six_idx_opened:
                 six_idx = load(six_idx_opened)
-                self.assertEqual(six_idx[0],
-                                 10)
-                self.assertEqual(len(six_idx),
-                                 1)
+                self.assertEqual(six_idx,
+                                 [10, 10])
+            sev_idx_path = '10.1/10.2/10.1/10.idx'
+            with ZstdFile(adb_opened_r.open(sev_idx_path)) as sev_idx_opened:
+                sev_idx = load(sev_idx_opened)
+                self.assertEqual(sev_idx,
+                                 [10, 10])
+            eig_idx_path = '10.1/10.2/10.2/10.idx'
+            with ZstdFile(adb_opened_r.open(eig_idx_path)) as eig_idx_opened:
+                eig_idx = load(eig_idx_opened)
+                self.assertEqual(eig_idx,
+                                 [10, 10])
         prs_obj = Prs(db_file_path=self.src_file_path,
                       idx_name_prefix='rsids_len',
                       idx_srt_rule=lambda val: val)

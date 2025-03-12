@@ -20,7 +20,7 @@ from pyzstd import (CParameter,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v3.5.0'
+    __version__ = 'v4.0.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -49,7 +49,7 @@ class Idx(SrtRules):
                  compr_frame_size: int = 1024 * 1024,
                  compr_chunk_size: int = 1024 * 1024 * 1024,
                  presrt_chunk_elems_quan: int = 10000000,
-                 idx_chunk_elems_quan: int = 100000):
+                 idx_chunk_elems_quan: int = 10000):
         super().__init__()
         self.db_file_path = os.path.normpath(db_file_path)
         if self.db_file_path.endswith('.zst'):
@@ -122,27 +122,83 @@ class Idx(SrtRules):
             yield obj
 
     def crt_idx(self,
-                name_dupl_num: int,
                 srtd_chunk: list,
                 srtd_line_starts: list,
+                low_dir_path: str,
                 adb_opened_w: ZipFile) -> None:
         fir_chunk_elem = srtd_chunk[0]
         if type(fir_chunk_elem) is str:
             fir_chunk_elem = f"'{fir_chunk_elem}'"
-        with ZstdFile(adb_opened_w.open(f'{fir_chunk_elem}.{name_dupl_num}.idx',
+        idx_path = os.path.join(low_dir_path,
+                                f'{fir_chunk_elem}.idx')
+        b_path = os.path.join(low_dir_path,
+                              f'{fir_chunk_elem}.b')
+        with ZstdFile(adb_opened_w.open(idx_path,
                                         mode='w'),
                       mode='w',
                       level_or_option=self.compr_settings) as idx_opened:
             dump(srtd_chunk,
                  idx_opened,
                  HIGHEST_PROTOCOL)
-        with ZstdFile(adb_opened_w.open(f'{fir_chunk_elem}.{name_dupl_num}.b',
+        with ZstdFile(adb_opened_w.open(b_path,
                                         mode='w'),
                       mode='w',
                       level_or_option=self.compr_settings) as b_opened:
             dump(srtd_line_starts,
                  b_opened,
                  HIGHEST_PROTOCOL)
+
+    def crt_dir_tree(self,
+                     srtd_chunk: list,
+                     srtd_line_starts: list,
+                     cur_dir_path: str,
+                     adb_opened_w: ZipFile) -> None:
+        if len(srtd_chunk) <= self.idx_chunk_elems_quan:
+            self.crt_idx(srtd_chunk,
+                         srtd_line_starts,
+                         cur_dir_path,
+                         adb_opened_w)
+            return None
+        srtd_chunk_half_len = len(srtd_chunk) // 2
+        srtd_chunk_half_1 = srtd_chunk[:srtd_chunk_half_len]
+        srtd_chunk_half_2 = srtd_chunk[srtd_chunk_half_len:]
+        srtd_line_starts_half_1 = srtd_line_starts[:srtd_chunk_half_len]
+        srtd_line_starts_half_2 = srtd_line_starts[srtd_chunk_half_len:]
+        fir_chunk_elem_1 = srtd_chunk_half_1[0]
+        fir_chunk_elem_2 = srtd_chunk_half_2[0]
+        if type(fir_chunk_elem_1) is str:
+            fir_chunk_elem_1 = f"'{fir_chunk_elem_1}'"
+        if type(fir_chunk_elem_2) is str:
+            fir_chunk_elem_2 = f"'{fir_chunk_elem_2}'"
+        child_dir_path_1 = os.path.join(cur_dir_path,
+                                        f'{fir_chunk_elem_1}.1')
+        child_dir_path_2 = os.path.join(cur_dir_path,
+                                        f'{fir_chunk_elem_2}.2')
+        adb_opened_w.mkdir(child_dir_path_1)
+        adb_opened_w.mkdir(child_dir_path_2)
+        self.crt_dir_tree(srtd_chunk_half_1,
+                          srtd_line_starts_half_1,
+                          child_dir_path_1,
+                          adb_opened_w)
+        self.crt_dir_tree(srtd_chunk_half_2,
+                          srtd_line_starts_half_2,
+                          child_dir_path_2,
+                          adb_opened_w)
+
+    def crt_top_dir(self,
+                    name_dupl_num: int,
+                    srtd_chunk: list,
+                    srtd_line_starts: list,
+                    adb_opened_w: ZipFile) -> None:
+        fir_chunk_elem = srtd_chunk[0]
+        if type(fir_chunk_elem) is str:
+            fir_chunk_elem = f"'{fir_chunk_elem}'"
+        top_dir_name = f'{fir_chunk_elem}.{name_dupl_num}'
+        adb_opened_w.mkdir(top_dir_name)
+        self.crt_dir_tree(srtd_chunk,
+                          srtd_line_starts,
+                          top_dir_name,
+                          adb_opened_w)
 
     def crt_idxs(self,
                  adb_opened_w: ZipFile) -> None:
@@ -152,27 +208,27 @@ class Idx(SrtRules):
                               self.presrtd_idxs_opened)):
             srtd_chunk.append(obj[0])
             srtd_line_starts.append(obj[1])
-            if len(srtd_chunk) == self.idx_chunk_elems_quan:
+            if len(srtd_chunk) == self.presrt_chunk_elems_quan:
                 if srtd_chunk[0] != prev_srtd_chunk_start:
-                    name_dupl_num = 0
+                    name_dupl_num = 1
                 else:
                     name_dupl_num += 1
-                self.crt_idx(name_dupl_num,
-                             srtd_chunk,
-                             srtd_line_starts,
-                             adb_opened_w)
+                self.crt_top_dir(name_dupl_num,
+                                 srtd_chunk,
+                                 srtd_line_starts,
+                                 adb_opened_w)
                 prev_srtd_chunk_start = srtd_chunk[0]
                 srtd_chunk.clear()
                 srtd_line_starts.clear()
         if srtd_chunk:
             if srtd_chunk[0] != prev_srtd_chunk_start:
-                name_dupl_num = 0
+                name_dupl_num = 1
             else:
                 name_dupl_num += 1
-            self.crt_idx(name_dupl_num,
-                         srtd_chunk,
-                         srtd_line_starts,
-                         adb_opened_w)
+            self.crt_top_dir(name_dupl_num,
+                             srtd_chunk,
+                             srtd_line_starts,
+                             adb_opened_w)
 
     @count_exec_time
     def presrt_idxs(self) -> None:
@@ -216,31 +272,3 @@ class Idx(SrtRules):
         with ZipFile(self.adb_path,
                      mode='w') as adb_opened_w:
             self.crt_idxs(adb_opened_w)
-
-# def r(d):
-#     for k in list(d):
-#         if type(d[k]) is dict:
-#             for i in r(d[k]):
-#                 yield f'{k}/{i}'
-#         else:
-#             yield f'{k}/{",".join(map(str,
-#                                       d[k]))}'
-
-
-# d = {'a1': {'b2': {'c3': {'d4': [0, 1, 2],
-#                           'e4': [3, 4, 5]},
-#                    'f3': {'g4': [6, 7, 8],
-#                           'h4': [9, 10, 11]}},
-#             'i2': {'j3': {'k4': [0, 1, 2],
-#                           'l4': [3, 4, 5]},
-#                    'm3': {'n4': [6, 7, 8],
-#                           'o4': [9, 10, 11]}}}}
-
-# ['a1/b2/c3/d4/0,1,2',
-#  'a1/b2/c3/e4/3,4,5',
-#  'a1/b2/f3/g4/6,7,8',
-#  'a1/b2/f3/h4/9,10,11',
-#  'a1/i2/j3/k4/0,1,2',
-#  'a1/i2/j3/l4/3,4,5',
-#  'a1/i2/m3/n4/6,7,8',
-#  'a1/i2/m3/o4/9,10,11']
