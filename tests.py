@@ -7,7 +7,7 @@ from idx import *
 from prs import *
 
 if __name__ == 'main':
-    __version__ = 'v4.4.0'
+    __version__ = 'v4.4.1'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -378,7 +378,7 @@ class BedTests(unittest.TestCase):
                       idx_name_prefix='chroms',
                       idx_srt_rule=lambda val: val)
         self.assertEqual(prs_obj.top_dir_names,
-                         ["'1'.1/"])
+                         {"'1'.1/"})
         self.assertEqual(prs_obj.top_chunk_begins,
                          ['1'])
         self.assertEqual(list(prs_obj.eq('1')),

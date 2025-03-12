@@ -20,7 +20,7 @@ from pyzstd import (CParameter,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v4.0.0'
+    __version__ = 'v4.1.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -115,6 +115,43 @@ class Idx(SrtRules):
                  HIGHEST_PROTOCOL)
         presrtd_idx_opened.seek(0)
 
+    @count_exec_time
+    def presrt_idxs(self) -> None:
+        with TextIOWrapper(SeekableZstdFile(self.db_zst_path)) as db_zst_opened:
+            while True:
+                db_zst_lstart = db_zst_opened.tell()
+                if not db_zst_opened.readline().startswith('#'):
+                    db_zst_opened.seek(db_zst_lstart)
+                    break
+            self.presrtd_idxs_opened.clear()
+            chunk, line_starts = [], []
+            while True:
+                db_zst_lstart = db_zst_opened.tell()
+                db_zst_line = db_zst_opened.readline().rstrip()
+                if not db_zst_line:
+                    if chunk:
+                        self.presrt_idx(chunk,
+                                        line_starts)
+                    break
+                db_line_prs_out = self.db_line_prs(db_zst_line,
+                                                   **self.db_line_prs_kwargs)
+                if not db_line_prs_out:
+                    continue
+                elif type(db_line_prs_out) is tuple:
+                    for db_line_prs_out_elem in db_line_prs_out:
+                        chunk.append(self.idx_srt_rule(db_line_prs_out_elem,
+                                                       **self.idx_srt_rule_kwargs))
+                        line_starts.append(db_zst_lstart)
+                else:
+                    chunk.append(self.idx_srt_rule(db_line_prs_out,
+                                                   **self.idx_srt_rule_kwargs))
+                    line_starts.append(db_zst_lstart)
+                if len(chunk) == self.presrt_chunk_elems_quan:
+                    self.presrt_idx(chunk,
+                                    line_starts)
+                    chunk.clear()
+                    line_starts.clear()
+
     @staticmethod
     def read_presrtd_idx(presrtd_idx_opened: TemporaryFile) -> Generator:
         for obj_ind in range(load(presrtd_idx_opened)):
@@ -200,15 +237,29 @@ class Idx(SrtRules):
                           top_dir_name,
                           adb_opened_w)
 
-    def crt_idxs(self,
-                 adb_opened_w: ZipFile) -> None:
-        srtd_chunk, srtd_line_starts = [], []
-        prev_srtd_chunk_start = None
-        for obj in merge(*map(self.read_presrtd_idx,
-                              self.presrtd_idxs_opened)):
-            srtd_chunk.append(obj[0])
-            srtd_line_starts.append(obj[1])
-            if len(srtd_chunk) == self.presrt_chunk_elems_quan:
+    @count_exec_time
+    def crt_adb(self) -> None:
+        with ZipFile(self.adb_path,
+                     mode='w') as adb_opened_w:
+            srtd_chunk, srtd_line_starts = [], []
+            prev_srtd_chunk_start = None
+            for obj in merge(*map(self.read_presrtd_idx,
+                                  self.presrtd_idxs_opened)):
+                srtd_chunk.append(obj[0])
+                srtd_line_starts.append(obj[1])
+                if len(srtd_chunk) == self.presrt_chunk_elems_quan:
+                    if srtd_chunk[0] != prev_srtd_chunk_start:
+                        name_dupl_num = 1
+                    else:
+                        name_dupl_num += 1
+                    self.crt_top_dir(name_dupl_num,
+                                     srtd_chunk,
+                                     srtd_line_starts,
+                                     adb_opened_w)
+                    prev_srtd_chunk_start = srtd_chunk[0]
+                    srtd_chunk.clear()
+                    srtd_line_starts.clear()
+            if srtd_chunk:
                 if srtd_chunk[0] != prev_srtd_chunk_start:
                     name_dupl_num = 1
                 else:
@@ -217,58 +268,3 @@ class Idx(SrtRules):
                                  srtd_chunk,
                                  srtd_line_starts,
                                  adb_opened_w)
-                prev_srtd_chunk_start = srtd_chunk[0]
-                srtd_chunk.clear()
-                srtd_line_starts.clear()
-        if srtd_chunk:
-            if srtd_chunk[0] != prev_srtd_chunk_start:
-                name_dupl_num = 1
-            else:
-                name_dupl_num += 1
-            self.crt_top_dir(name_dupl_num,
-                             srtd_chunk,
-                             srtd_line_starts,
-                             adb_opened_w)
-
-    @count_exec_time
-    def presrt_idxs(self) -> None:
-        with TextIOWrapper(SeekableZstdFile(self.db_zst_path)) as db_zst_opened:
-            while True:
-                db_zst_lstart = db_zst_opened.tell()
-                if not db_zst_opened.readline().startswith('#'):
-                    db_zst_opened.seek(db_zst_lstart)
-                    break
-            self.presrtd_idxs_opened.clear()
-            chunk, line_starts = [], []
-            while True:
-                db_zst_lstart = db_zst_opened.tell()
-                db_zst_line = db_zst_opened.readline().rstrip()
-                if not db_zst_line:
-                    if chunk:
-                        self.presrt_idx(chunk,
-                                        line_starts)
-                    break
-                db_line_prs_out = self.db_line_prs(db_zst_line,
-                                                   **self.db_line_prs_kwargs)
-                if not db_line_prs_out:
-                    continue
-                elif type(db_line_prs_out) is tuple:
-                    for db_line_prs_out_elem in db_line_prs_out:
-                        chunk.append(self.idx_srt_rule(db_line_prs_out_elem,
-                                                       **self.idx_srt_rule_kwargs))
-                        line_starts.append(db_zst_lstart)
-                else:
-                    chunk.append(self.idx_srt_rule(db_line_prs_out,
-                                                   **self.idx_srt_rule_kwargs))
-                    line_starts.append(db_zst_lstart)
-                if len(chunk) == self.presrt_chunk_elems_quan:
-                    self.presrt_idx(chunk,
-                                    line_starts)
-                    chunk.clear()
-                    line_starts.clear()
-
-    @count_exec_time
-    def crt_adb(self) -> None:
-        with ZipFile(self.adb_path,
-                     mode='w') as adb_opened_w:
-            self.crt_idxs(adb_opened_w)

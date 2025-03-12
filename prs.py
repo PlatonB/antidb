@@ -19,7 +19,7 @@ from pyzstd import (SeekableZstdFile,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v4.0.0'
+    __version__ = 'v4.0.1'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -38,7 +38,9 @@ class Prs(Idx):
                          idx_srt_rule_kwargs=idx_srt_rule_kwargs)
         self.adb_opened_r = ZipFile(self.adb_path)
         self.db_zst_opened_r = TextIOWrapper(SeekableZstdFile(self.db_zst_path))
-        self.top_dir_names = [path_obj.at for path_obj in Path(self.adb_path).iterdir()]
+        self.top_dir_names = set(path_obj.at
+                                 for path_obj
+                                 in Path(self.adb_path).iterdir())
         if not self.top_dir_names:
             raise NoIdxsError()
         self.top_chunk_begins = sorted(map(lambda dir_name:
