@@ -19,7 +19,7 @@ from pyzstd import (SeekableZstdFile,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v5.0.1'
+    __version__ = 'v5.1.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -36,6 +36,7 @@ class Prs(Idx):
                          db_line_prs=None,
                          idx_srt_rule=idx_srt_rule,
                          idx_srt_rule_kwargs=idx_srt_rule_kwargs)
+        self.adb_path_obj = Path(self.adb_path)
         self.adb_opened_r = ZipFile(self.adb_path)
         self.db_zst_opened_r = TextIOWrapper(SeekableZstdFile(self.db_zst_path))
 
@@ -60,18 +61,16 @@ class Prs(Idx):
                       prepd_query_bords: list[Any,
                                               Any],
                       cur_dir_path: str = '') -> Generator:
-        chi_path_objs = list(Path(self.adb_path,
-                             cur_dir_path).iterdir())
-        chi_paths = [chi_path_obj.at
-                     for chi_path_obj
-                     in chi_path_objs]
+        chi_path_objs = list(self.adb_path_obj.
+                             joinpath(cur_dir_path).
+                             iterdir())
         if chi_path_objs[0].is_file():
-            neces_idx_path = sorted(chi_paths)[1]
+            neces_idx_path = chi_path_objs[0].at
             yield neces_idx_path
         else:
-            chi_chunk_begins = sorted(map(lambda chi_dir_path:
-                                          eval(os.path.basename(chi_dir_path[:-1]).rsplit('.', maxsplit=1)[0]),
-                                          chi_paths))
+            chi_chunk_begins = sorted(map(lambda chi_path_obj:
+                                          eval(chi_path_obj.stem),
+                                          chi_path_objs))
             start_dir_ind = bisect_left(chi_chunk_begins,
                                         prepd_query_bords[0]) - 1
             if start_dir_ind < 0:
