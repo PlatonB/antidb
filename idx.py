@@ -20,7 +20,7 @@ from pyzstd import (CParameter,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v5.0.0'
+    __version__ = 'v5.0.1'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -50,7 +50,7 @@ class Idx(SrtRules):
                  compr_chunk_size: int = 1024 * 1024 * 1024,
                  presrt_chunk_elems_quan: int = 10000000,
                  idx_chunk_div: int = 100,
-                 idx_max_chunk_elems_quan: int = 10000):
+                 idx_max_chunk_elems_quan: int = 100000):
         super().__init__()
         self.db_file_path = os.path.normpath(db_file_path)
         if self.db_file_path.endswith('.zst'):

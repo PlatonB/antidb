@@ -161,63 +161,34 @@ if __name__ == '__main__':
         json.dump(perf, perf_file_opened, indent=4)
 ```
 
-#### (DEPRECATED) Performance measurement results
-##### ann_perf_2023-07-09 20:45:36.102376.json
-- `dbsnp_idx` - indexing `GnomAD`- and `CLN`-containing lines of dbSNP VCF;
-  - `crt_db_zst` - compressing indexable file (output is further called "DB");
-  - `crt_full_idx_tmp` - indexing DB (output is further called "temporary full index");
-  - `crt_full_idx_tmp_srtd` - sorting temporary full index by indexed DB elements;
-  - `crt_full_idx` - compressing sorted temporary full index (output is further called "full index");
-  - `crt_mem_idx` - selective indexing of full index;
-- `rsmerged_idx` - indexing all lines of rsmerged JSON;
-  - <...>
-- `ann` - querying 2842 rsIDs by indexed dbSNP VCF and indexed rsmerged JSON.
+#### Performance measurement results
+##### ann_perf_2025-03-19 01:18:41.353566.json
 ```
 {
     "dbsnp_idx": [
         [
-            "crt_db_zst",
-            "0:39:02.127938"
+            "presrt_idxs",
+            null,
+            "0:39:17.090482"
         ],
         [
-            "crt_full_idx_tmp",
-            "1:06:13.698458"
-        ],
-        [
-            "crt_full_idx_tmp_srtd",
-            "0:00:00.928633"
-        ],
-        [
-            "crt_full_idx",
-            "0:00:00.577710"
-        ],
-        [
-            "crt_mem_idx",
-            "0:00:00.280014"
+            "crt_adb",
+            null,
+            "0:00:02.481592"
         ]
     ],
     "rsmerged_idx": [
         [
-            "crt_db_zst",
-            "0:02:44.068920"
+            "presrt_idxs",
+            null,
+            "0:03:43.918339"
         ],
         [
-            "crt_full_idx_tmp",
-            "0:04:43.153807"
-        ],
-        [
-            "crt_full_idx_tmp_srtd",
-            "0:00:30.015826"
-        ],
-        [
-            "crt_full_idx",
-            "0:00:17.204649"
-        ],
-        [
-            "crt_mem_idx",
-            "0:00:08.811190"
+            "crt_adb",
+            null,
+            "0:01:24.072309"
         ]
     ],
-    "ann": "0:00:06.995505"
+    "ann": "0:01:26.910741"
 }
 ```
