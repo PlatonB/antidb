@@ -19,7 +19,7 @@ from pyzstd import (SeekableZstdFile,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v5.0.0'
+    __version__ = 'v5.0.1'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -62,11 +62,11 @@ class Prs(Idx):
                       cur_dir_path: str = '') -> Generator:
         chi_path_objs = list(Path(self.adb_path,
                              cur_dir_path).iterdir())
-        chi_paths = set(chi_path_obj.at
-                        for chi_path_obj
-                        in chi_path_objs)
+        chi_paths = [chi_path_obj.at
+                     for chi_path_obj
+                     in chi_path_objs]
         if chi_path_objs[0].is_file():
-            neces_idx_path = sorted(list(chi_paths))[1]
+            neces_idx_path = sorted(chi_paths)[1]
             yield neces_idx_path
         else:
             chi_chunk_begins = sorted(map(lambda chi_dir_path:
@@ -83,25 +83,20 @@ class Prs(Idx):
                                                       end_dir_ind + 1]
                 prev_neces_chunk_begin = None
                 for neces_chunk_begin in neces_chunk_begins:
-                    if neces_chunk_begin == prev_neces_chunk_begin:
-                        continue
-                    else:
+                    if neces_chunk_begin != prev_neces_chunk_begin:
+                        name_dupl_num = 1
                         prev_neces_chunk_begin = deepcopy(neces_chunk_begin)
-                    name_dupl_num = 1
-                    while True:
-                        if type(neces_chunk_begin) is str:
-                            neces_dir_name = f"'{neces_chunk_begin}'.{name_dupl_num}/"
-                        else:
-                            neces_dir_name = f'{neces_chunk_begin}.{name_dupl_num}/'
-                        neces_dir_path = os.path.join(cur_dir_path,
-                                                      neces_dir_name)
-                        if neces_dir_path in chi_paths:
-                            for neces_idx_path in self.sel_dir_names(prepd_query_bords,
-                                                                     neces_dir_path):
-                                yield neces_idx_path
-                            name_dupl_num += 1
-                        else:
-                            break
+                    else:
+                        name_dupl_num += 1
+                    if type(neces_chunk_begin) is str:
+                        neces_dir_name = f"'{neces_chunk_begin}'.{name_dupl_num}/"
+                    else:
+                        neces_dir_name = f'{neces_chunk_begin}.{name_dupl_num}/'
+                    neces_dir_path = os.path.join(cur_dir_path,
+                                                  neces_dir_name)
+                    for neces_idx_path in self.sel_dir_names(prepd_query_bords,
+                                                             neces_dir_path):
+                        yield neces_idx_path
 
     def read_idx(self,
                  idx_path: str) -> list:
