@@ -1,14 +1,8 @@
 if __name__ == 'main':
-    __version__ = 'v1.1.1'
+    __version__ = 'v1.2.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2025'}]
-
-
-class NoIdxsError(Exception):
-    def __init__(self):
-        err_msg = f'\nThere are no indexes in DB'
-        super().__init__(err_msg)
 
 
 class QueryStartGtEndError(Exception):

@@ -20,7 +20,7 @@ from pyzstd import (CParameter,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v4.1.0'
+    __version__ = 'v5.0.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -49,7 +49,8 @@ class Idx(SrtRules):
                  compr_frame_size: int = 1024 * 1024,
                  compr_chunk_size: int = 1024 * 1024 * 1024,
                  presrt_chunk_elems_quan: int = 10000000,
-                 idx_chunk_elems_quan: int = 10000):
+                 idx_chunk_div: int = 100,
+                 idx_max_chunk_elems_quan: int = 10000):
         super().__init__()
         self.db_file_path = os.path.normpath(db_file_path)
         if self.db_file_path.endswith('.zst'):
@@ -75,7 +76,10 @@ class Idx(SrtRules):
         self.compr_frame_size = compr_frame_size
         self.compr_chunk_size = compr_chunk_size
         self.presrt_chunk_elems_quan = presrt_chunk_elems_quan
-        self.idx_chunk_elems_quan = idx_chunk_elems_quan
+        self.idx_chunk_div = idx_chunk_div
+        if self.idx_chunk_div < 2:
+            self.idx_chunk_div = 2
+        self.idx_max_chunk_elems_quan = idx_max_chunk_elems_quan
         self.perf = []
 
     def idx(self):
@@ -160,7 +164,7 @@ class Idx(SrtRules):
 
     def crt_idx(self,
                 srtd_chunk: list,
-                srtd_line_starts: list,
+                srtd_lstarts: list,
                 low_dir_path: str,
                 adb_opened_w: ZipFile) -> None:
         fir_chunk_elem = srtd_chunk[0]
@@ -181,90 +185,106 @@ class Idx(SrtRules):
                                         mode='w'),
                       mode='w',
                       level_or_option=self.compr_settings) as b_opened:
-            dump(srtd_line_starts,
+            dump(srtd_lstarts,
                  b_opened,
                  HIGHEST_PROTOCOL)
 
+    @staticmethod
+    def crt_chi_dir(srtd_chunk_start: Any,
+                    prev_srtd_chunk_start: Any,
+                    name_dupl_num: int,
+                    adb_opened_w: ZipFile,
+                    cur_dir_path: str = '') -> tuple[int,
+                                                     str]:
+        if srtd_chunk_start != prev_srtd_chunk_start:
+            name_dupl_num = 1
+        else:
+            name_dupl_num += 1
+        if type(srtd_chunk_start) is str:
+            srtd_chunk_start = f"'{srtd_chunk_start}'"
+        chi_dir_name = f'{srtd_chunk_start}.{name_dupl_num}'
+        chi_dir_path = os.path.join(cur_dir_path,
+                                    chi_dir_name)
+        adb_opened_w.mkdir(chi_dir_path)
+        return name_dupl_num, chi_dir_path
+
     def crt_dir_tree(self,
-                     srtd_chunk: list,
-                     srtd_line_starts: list,
                      cur_dir_path: str,
-                     adb_opened_w: ZipFile) -> None:
-        if len(srtd_chunk) <= self.idx_chunk_elems_quan:
-            self.crt_idx(srtd_chunk,
-                         srtd_line_starts,
+                     cur_srtd_chunk: list,
+                     srtd_lstarts: list,
+                     adb_opened_w: ZipFile,
+                     min_srtd_chunk_flag: bool = False) -> None:
+        cur_srtd_chunk_len = len(cur_srtd_chunk)
+        if (cur_srtd_chunk_len <= self.idx_max_chunk_elems_quan
+                or min_srtd_chunk_flag):
+            self.crt_idx(cur_srtd_chunk,
+                         srtd_lstarts,
                          cur_dir_path,
                          adb_opened_w)
             return None
-        srtd_chunk_half_len = len(srtd_chunk) // 2
-        srtd_chunk_half_1 = srtd_chunk[:srtd_chunk_half_len]
-        srtd_chunk_half_2 = srtd_chunk[srtd_chunk_half_len:]
-        srtd_line_starts_half_1 = srtd_line_starts[:srtd_chunk_half_len]
-        srtd_line_starts_half_2 = srtd_line_starts[srtd_chunk_half_len:]
-        fir_chunk_elem_1 = srtd_chunk_half_1[0]
-        fir_chunk_elem_2 = srtd_chunk_half_2[0]
-        if type(fir_chunk_elem_1) is str:
-            fir_chunk_elem_1 = f"'{fir_chunk_elem_1}'"
-        if type(fir_chunk_elem_2) is str:
-            fir_chunk_elem_2 = f"'{fir_chunk_elem_2}'"
-        child_dir_path_1 = os.path.join(cur_dir_path,
-                                        f'{fir_chunk_elem_1}.1')
-        child_dir_path_2 = os.path.join(cur_dir_path,
-                                        f'{fir_chunk_elem_2}.2')
-        adb_opened_w.mkdir(child_dir_path_1)
-        adb_opened_w.mkdir(child_dir_path_2)
-        self.crt_dir_tree(srtd_chunk_half_1,
-                          srtd_line_starts_half_1,
-                          child_dir_path_1,
-                          adb_opened_w)
-        self.crt_dir_tree(srtd_chunk_half_2,
-                          srtd_line_starts_half_2,
-                          child_dir_path_2,
-                          adb_opened_w)
-
-    def crt_top_dir(self,
-                    name_dupl_num: int,
-                    srtd_chunk: list,
-                    srtd_line_starts: list,
-                    adb_opened_w: ZipFile) -> None:
-        fir_chunk_elem = srtd_chunk[0]
-        if type(fir_chunk_elem) is str:
-            fir_chunk_elem = f"'{fir_chunk_elem}'"
-        top_dir_name = f'{fir_chunk_elem}.{name_dupl_num}'
-        adb_opened_w.mkdir(top_dir_name)
-        self.crt_dir_tree(srtd_chunk,
-                          srtd_line_starts,
-                          top_dir_name,
-                          adb_opened_w)
+        chi_srtd_chunk_len = cur_srtd_chunk_len // self.idx_chunk_div
+        if chi_srtd_chunk_len < self.idx_max_chunk_elems_quan:
+            idx_chunk_div = cur_srtd_chunk_len // self.idx_max_chunk_elems_quan
+            if idx_chunk_div > 1:
+                chi_srtd_chunk_len = cur_srtd_chunk_len // idx_chunk_div
+            else:
+                chi_srtd_chunk_len = cur_srtd_chunk_len // 2
+            min_srtd_chunk_flag = True
+        bord_inds = list(range(0, cur_srtd_chunk_len,
+                               chi_srtd_chunk_len))
+        chi_srtd_chunks = [cur_srtd_chunk[bord_ind:
+                                          (bord_ind +
+                                           chi_srtd_chunk_len)]
+                           for bord_ind in bord_inds]
+        chi_srtd_lstarts = [srtd_lstarts[bord_ind:
+                                         (bord_ind +
+                                          chi_srtd_chunk_len)]
+                            for bord_ind in bord_inds]
+        prev_chi_srtd_chunk_start = None
+        name_dupl_num = 1
+        for chi_srtd_chunk_ind in range(len(chi_srtd_chunks)):
+            chi_srtd_chunk_start = chi_srtd_chunks[chi_srtd_chunk_ind][0]
+            name_dupl_num, chi_dir_path = self.crt_chi_dir(chi_srtd_chunk_start,
+                                                           prev_chi_srtd_chunk_start,
+                                                           name_dupl_num,
+                                                           adb_opened_w,
+                                                           cur_dir_path)
+            self.crt_dir_tree(chi_dir_path,
+                              chi_srtd_chunks[chi_srtd_chunk_ind],
+                              chi_srtd_lstarts[chi_srtd_chunk_ind],
+                              adb_opened_w,
+                              min_srtd_chunk_flag)
+            prev_chi_srtd_chunk_start = deepcopy(chi_srtd_chunk_start)
 
     @count_exec_time
     def crt_adb(self) -> None:
         with ZipFile(self.adb_path,
                      mode='w') as adb_opened_w:
-            srtd_chunk, srtd_line_starts = [], []
+            srtd_chunk, srtd_lstarts = [], []
             prev_srtd_chunk_start = None
+            name_dupl_num = 1
             for obj in merge(*map(self.read_presrtd_idx,
                                   self.presrtd_idxs_opened)):
                 srtd_chunk.append(obj[0])
-                srtd_line_starts.append(obj[1])
+                srtd_lstarts.append(obj[1])
                 if len(srtd_chunk) == self.presrt_chunk_elems_quan:
-                    if srtd_chunk[0] != prev_srtd_chunk_start:
-                        name_dupl_num = 1
-                    else:
-                        name_dupl_num += 1
-                    self.crt_top_dir(name_dupl_num,
-                                     srtd_chunk,
-                                     srtd_line_starts,
-                                     adb_opened_w)
+                    name_dupl_num, chi_dir_name = self.crt_chi_dir(srtd_chunk[0],
+                                                                   prev_srtd_chunk_start,
+                                                                   name_dupl_num,
+                                                                   adb_opened_w)
+                    self.crt_dir_tree(chi_dir_name,
+                                      srtd_chunk,
+                                      srtd_lstarts,
+                                      adb_opened_w)
                     prev_srtd_chunk_start = srtd_chunk[0]
                     srtd_chunk.clear()
-                    srtd_line_starts.clear()
+                    srtd_lstarts.clear()
             if srtd_chunk:
-                if srtd_chunk[0] != prev_srtd_chunk_start:
-                    name_dupl_num = 1
-                else:
-                    name_dupl_num += 1
-                self.crt_top_dir(name_dupl_num,
-                                 srtd_chunk,
-                                 srtd_line_starts,
-                                 adb_opened_w)
+                name_dupl_num, chi_dir_name = self.crt_chi_dir(srtd_chunk[0],
+                                                               prev_srtd_chunk_start,
+                                                               name_dupl_num,
+                                                               adb_opened_w)
+                self.crt_dir_tree(chi_dir_name,
+                                  srtd_chunk,
+                                  srtd_lstarts,
+                                  adb_opened_w)
