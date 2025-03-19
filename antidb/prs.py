@@ -13,13 +13,13 @@ from math import inf
 from bisect import (bisect_left,
                     bisect_right)
 from copy import deepcopy
-from idx import Idx
-from err import QueryStartGtEndError
+from .idx import Idx
+from .err import QueryStartGtEndError
 from pyzstd import (SeekableZstdFile,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v5.1.0'
+    __version__ = 'v5.1.1'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]

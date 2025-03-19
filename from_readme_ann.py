@@ -5,12 +5,12 @@ import json
 import os
 from argparse import ArgumentParser
 from datetime import datetime
-from idx import (Idx,
-                 count_exec_time)
-from prs import Prs
+from antidb.idx import (Idx,
+                        count_exec_time)
+from antidb.prs import Prs
 
 if __name__ == '__main__':
-    __version__ = 'v1.3.1'
+    __version__ = 'v1.3.2'
 
 
 def prs_dbsnp_line(dbsnp_zst_line: str) -> str | None:

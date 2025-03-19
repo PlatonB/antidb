@@ -1,8 +1,5 @@
 # antidb
-
-## Note
-The project code is currently being rewritten from scratch, so the README is not really relevant.
-
+## Documentation is under development!
 ## Quick start
 ```
 pip3 install antidb
@@ -12,7 +9,7 @@ from antidb.idx import (Idx,
                         count_exec_time)
 from antidb.prs import Prs
 
-__version__ = 'v1.3.0-readme'
+__version__ = 'v1.3.1'
 
 dbsnp_vcf_path = '/path/to/GCF_000001405.40[.zst]'
 dbsnp_idx_prefix = 'all_rsids'
@@ -44,7 +41,7 @@ NC_000001.11	116545157	rs12044852	C	A	.	.	RS=12044852;dbSNPBuildID=120;SSR=0;GEN
 
 NC_000014.9	67588896	rs4902496	C	G,T	.	.	RS=4902496;dbSNPBuildID=111;SSR=0;GENEINFO=PIGH:5283|GPHN:10243|PLEKHH1:57475;VC=SNV;PUB;U3;INT;R3;GNO;FREQ=1000Genomes:0.3357,0.6643,.|ALSPAC:0.2019,0.7981,.|Estonian:0.1518,0.8482,.|GENOME_DK:0.125,0.875,.|GoNL:0.1703,0.8297,.|HapMap:0.3639,0.6361,.|KOREAN:0.3399,0.6601,.|MGP:0.3558,0.6442,.|NorthernSweden:0.1817,0.8183,.|Qatari:0.2176,0.7824,.|SGDP_PRJ:0.189,0.811,.|Siberian:0.1429,0.8571,.|TOMMO:0.2816,0.7184,.|TOPMED:0.285,0.715,.|TWINSUK:0.1888,0.8112,.|Vietnamese:0.4533,0.5467,.|dbGaP_PopFreq:0.2712,0.7288,0;COMMON
 
-('get_rsid_lines', None, '0:00:02.751253')
+('get_rsid_lines', None, '0:00:00.361402')
 ```
 
 ## App example
@@ -62,7 +59,7 @@ from antidb.idx import (Idx,
 from antidb.prs import Prs
 
 if __name__ == '__main__':
-    __version__ = 'v1.3.1-readme'
+    __version__ = 'v1.3.2'
 
 
 def prs_dbsnp_line(dbsnp_zst_line: str) -> str | None:
@@ -162,7 +159,7 @@ if __name__ == '__main__':
 ```
 
 #### Performance measurement results
-##### ann_perf_2025-03-19 01:18:41.353566.json
+##### Annotation of 2842 SNPs by dbSNP VCF and refsnp-merged JSON
 ```
 {
     "dbsnp_idx": [

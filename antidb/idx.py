@@ -14,13 +14,13 @@ from pickle import (dump,
                     HIGHEST_PROTOCOL)
 from heapq import merge
 from io import TextIOWrapper
-from srt import SrtRules
+from .srt import SrtRules
 from pyzstd import (CParameter,
                     SeekableZstdFile,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v5.0.1'
+    __version__ = 'v5.0.2'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]

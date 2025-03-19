@@ -2,12 +2,12 @@
 import sys; sys.dont_write_bytecode = True
 # autopep8: on
 import unittest
-from srt import *
-from idx import *
-from prs import *
+from antidb.srt import *
+from antidb.idx import *
+from antidb.prs import *
 
 if __name__ == 'main':
-    __version__ = 'v4.5.0'
+    __version__ = 'v4.5.1'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
