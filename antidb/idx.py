@@ -20,7 +20,7 @@ from pyzstd import (CParameter,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v5.0.2'
+    __version__ = 'v6.0.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -40,49 +40,49 @@ def count_exec_time(any_func: Callable) -> Callable:
 class Idx(SrtRules):
     def __init__(self,
                  db_file_path: str,
-                 idx_name_prefix: str,
+                 adb_name_prefix: str,
                  db_line_prs: Callable,
-                 idx_srt_rule: Callable,
+                 adb_srt_rule: Callable,
                  db_line_prs_kwargs: None | dict = None,
-                 idx_srt_rule_kwargs: None | dict = None,
+                 adb_srt_rule_kwargs: None | dict = None,
                  compr_level: int = 3,
                  compr_frame_size: int = 1024 * 1024,
                  compr_chunk_size: int = 1024 * 1024 * 1024,
-                 presrt_chunk_elems_quan: int = 10000000,
-                 idx_chunk_div: int = 100,
-                 idx_max_chunk_elems_quan: int = 100000):
+                 presrt_chunk_len: int = 10000000,
+                 lstarts_idx_div: int = 100,
+                 lstarts_idx_len: int = 100000):
         super().__init__()
         self.db_file_path = os.path.normpath(db_file_path)
         if self.db_file_path.endswith('.zst'):
             self.db_zst_path = deepcopy(self.db_file_path)
-            self.adb_path = f'{self.db_file_path[:-4]}.{idx_name_prefix}.adb'
+            self.adb_path = f'{self.db_file_path[:-4]}.{adb_name_prefix}.adb'
         else:
             self.db_zst_path = self.db_file_path + '.zst'
-            self.adb_path = f'{self.db_file_path}.{idx_name_prefix}.adb'
+            self.adb_path = f'{self.db_file_path}.{adb_name_prefix}.adb'
         self.temp_dir_path = os.path.dirname(self.db_file_path)
         self.db_line_prs = db_line_prs
-        self.idx_srt_rule = idx_srt_rule
+        self.adb_srt_rule = adb_srt_rule
         if db_line_prs_kwargs:
             self.db_line_prs_kwargs = db_line_prs_kwargs
         else:
             self.db_line_prs_kwargs = {}
-        if idx_srt_rule_kwargs:
-            self.idx_srt_rule_kwargs = idx_srt_rule_kwargs
+        if adb_srt_rule_kwargs:
+            self.adb_srt_rule_kwargs = adb_srt_rule_kwargs
         else:
-            self.idx_srt_rule_kwargs = {}
+            self.adb_srt_rule_kwargs = {}
         self.presrtd_idxs_opened = []
         self.compr_settings = {CParameter.compressionLevel:
                                compr_level}
         self.compr_frame_size = compr_frame_size
         self.compr_chunk_size = compr_chunk_size
-        self.presrt_chunk_elems_quan = presrt_chunk_elems_quan
-        self.idx_chunk_div = idx_chunk_div
-        if self.idx_chunk_div < 2:
-            self.idx_chunk_div = 2
-        self.idx_max_chunk_elems_quan = idx_max_chunk_elems_quan
+        self.presrt_chunk_len = presrt_chunk_len
+        self.lstarts_idx_div = lstarts_idx_div
+        if self.lstarts_idx_div < 2:
+            self.lstarts_idx_div = 2
+        self.lstarts_idx_len = lstarts_idx_len
         self.perf = []
 
-    def idx(self):
+    def idx(self) -> None:
         if not os.path.exists(self.db_zst_path):
             self.perf.append(self.crt_db_zst())
         if not os.path.exists(self.adb_path):
@@ -143,14 +143,14 @@ class Idx(SrtRules):
                     continue
                 elif type(db_line_prs_out) is tuple:
                     for db_line_prs_out_elem in db_line_prs_out:
-                        chunk.append(self.idx_srt_rule(db_line_prs_out_elem,
-                                                       **self.idx_srt_rule_kwargs))
+                        chunk.append(self.adb_srt_rule(db_line_prs_out_elem,
+                                                       **self.adb_srt_rule_kwargs))
                         line_starts.append(db_zst_lstart)
                 else:
-                    chunk.append(self.idx_srt_rule(db_line_prs_out,
-                                                   **self.idx_srt_rule_kwargs))
+                    chunk.append(self.adb_srt_rule(db_line_prs_out,
+                                                   **self.adb_srt_rule_kwargs))
                     line_starts.append(db_zst_lstart)
-                if len(chunk) == self.presrt_chunk_elems_quan:
+                if len(chunk) == self.presrt_chunk_len:
                     self.presrt_idx(chunk,
                                     line_starts)
                     chunk.clear()
@@ -162,129 +162,105 @@ class Idx(SrtRules):
             obj = load(presrtd_idx_opened)
             yield obj
 
-    def crt_idx(self,
-                srtd_chunk: list,
-                srtd_lstarts: list,
-                low_dir_path: str,
-                adb_opened_w: ZipFile) -> None:
-        fir_chunk_elem = srtd_chunk[0]
-        if type(fir_chunk_elem) is str:
-            fir_chunk_elem = f"'{fir_chunk_elem}'"
-        idx_path = os.path.join(low_dir_path,
-                                f'{fir_chunk_elem}.idx')
-        b_path = os.path.join(low_dir_path,
-                              f'{fir_chunk_elem}.b')
-        with ZstdFile(adb_opened_w.open(idx_path,
+    def crt_lstarts_idx(self,
+                        vals_n_lstarts: list,
+                        low_dir_path: str,
+                        adb_opened_w: ZipFile) -> str:
+        lstarts_idx_path = os.path.join(low_dir_path,
+                                        'lstarts')
+        with ZstdFile(adb_opened_w.open(lstarts_idx_path,
                                         mode='w'),
                       mode='w',
-                      level_or_option=self.compr_settings) as idx_opened:
-            dump(srtd_chunk,
-                 idx_opened,
+                      level_or_option=self.compr_settings) as lstarts_idx_opened:
+            dump(list(zip(*vals_n_lstarts)),
+                 lstarts_idx_opened,
                  HIGHEST_PROTOCOL)
-        with ZstdFile(adb_opened_w.open(b_path,
-                                        mode='w'),
-                      mode='w',
-                      level_or_option=self.compr_settings) as b_opened:
-            dump(srtd_lstarts,
-                 b_opened,
-                 HIGHEST_PROTOCOL)
+        return lstarts_idx_path
 
-    @staticmethod
-    def crt_chi_dir(srtd_chunk_start: Any,
-                    prev_srtd_chunk_start: Any,
-                    name_dupl_num: int,
-                    adb_opened_w: ZipFile,
-                    cur_dir_path: str = '') -> tuple[int,
-                                                     str]:
-        if srtd_chunk_start != prev_srtd_chunk_start:
-            name_dupl_num = 1
-        else:
-            name_dupl_num += 1
-        if type(srtd_chunk_start) is str:
-            srtd_chunk_start = f"'{srtd_chunk_start}'"
-        chi_dir_name = f'{srtd_chunk_start}.{name_dupl_num}'
-        chi_dir_path = os.path.join(cur_dir_path,
-                                    chi_dir_name)
-        adb_opened_w.mkdir(chi_dir_path)
-        return name_dupl_num, chi_dir_path
+    def crt_paths_idx(self,
+                      adb_opened_w: ZipFile,
+                      paths_idx_obj: list,
+                      dir_path: str = '') -> str:
+        paths_idx_path = os.path.join(dir_path,
+                                      'paths')
+        with adb_opened_w.open(paths_idx_path,
+                               mode='w') as paths_idx_opened:
+            dump(paths_idx_obj,
+                 paths_idx_opened,
+                 HIGHEST_PROTOCOL)
+        return paths_idx_path
 
     def crt_dir_tree(self,
                      cur_dir_path: str,
-                     cur_srtd_chunk: list,
-                     srtd_lstarts: list,
+                     cur_vals_n_lstarts: list,
                      adb_opened_w: ZipFile,
-                     min_srtd_chunk_flag: bool = False) -> None:
-        cur_srtd_chunk_len = len(cur_srtd_chunk)
-        if (cur_srtd_chunk_len <= self.idx_max_chunk_elems_quan
-                or min_srtd_chunk_flag):
-            self.crt_idx(cur_srtd_chunk,
-                         srtd_lstarts,
-                         cur_dir_path,
-                         adb_opened_w)
-            return None
-        chi_srtd_chunk_len = cur_srtd_chunk_len // self.idx_chunk_div
-        if chi_srtd_chunk_len < self.idx_max_chunk_elems_quan:
-            idx_chunk_div = cur_srtd_chunk_len // self.idx_max_chunk_elems_quan
-            if idx_chunk_div > 1:
-                chi_srtd_chunk_len = cur_srtd_chunk_len // idx_chunk_div
+                     min_vals_n_lstarts_flag: bool = False) -> str | None:
+        cur_vals_n_lstarts_len = len(cur_vals_n_lstarts)
+        if (cur_vals_n_lstarts_len <= self.lstarts_idx_len
+                or min_vals_n_lstarts_flag):
+            lstarts_idx_path = self.crt_lstarts_idx(cur_vals_n_lstarts,
+                                                    cur_dir_path,
+                                                    adb_opened_w)
+            return lstarts_idx_path
+        chi_vals_n_lstarts_len = cur_vals_n_lstarts_len // self.lstarts_idx_div
+        if chi_vals_n_lstarts_len < self.lstarts_idx_len:
+            lstarts_idx_div = cur_vals_n_lstarts_len // self.lstarts_idx_len
+            if lstarts_idx_div > 1:
+                chi_vals_n_lstarts_len = cur_vals_n_lstarts_len // lstarts_idx_div
             else:
-                chi_srtd_chunk_len = cur_srtd_chunk_len // 2
-            min_srtd_chunk_flag = True
-        bord_inds = list(range(0, cur_srtd_chunk_len,
-                               chi_srtd_chunk_len))
-        chi_srtd_chunks = [cur_srtd_chunk[bord_ind:
-                                          (bord_ind +
-                                           chi_srtd_chunk_len)]
-                           for bord_ind in bord_inds]
-        chi_srtd_lstarts = [srtd_lstarts[bord_ind:
-                                         (bord_ind +
-                                          chi_srtd_chunk_len)]
-                            for bord_ind in bord_inds]
-        prev_chi_srtd_chunk_start = None
-        name_dupl_num = 1
-        for chi_srtd_chunk_ind in range(len(chi_srtd_chunks)):
-            chi_srtd_chunk_start = chi_srtd_chunks[chi_srtd_chunk_ind][0]
-            name_dupl_num, chi_dir_path = self.crt_chi_dir(chi_srtd_chunk_start,
-                                                           prev_chi_srtd_chunk_start,
-                                                           name_dupl_num,
-                                                           adb_opened_w,
-                                                           cur_dir_path)
-            self.crt_dir_tree(chi_dir_path,
-                              chi_srtd_chunks[chi_srtd_chunk_ind],
-                              chi_srtd_lstarts[chi_srtd_chunk_ind],
-                              adb_opened_w,
-                              min_srtd_chunk_flag)
-            prev_chi_srtd_chunk_start = deepcopy(chi_srtd_chunk_start)
+                chi_vals_n_lstarts_len = cur_vals_n_lstarts_len // 2
+            min_vals_n_lstarts_flag = True
+        bord_inds = list(range(0, cur_vals_n_lstarts_len,
+                               chi_vals_n_lstarts_len))
+        chi_vals_n_lstarts = [cur_vals_n_lstarts[bord_ind:
+                                                 (bord_ind +
+                                                  chi_vals_n_lstarts_len)]
+                              for bord_ind in bord_inds]
+        chi_dir_num = 1
+        paths_idx_obj = [[], []]
+        for ind in range(len(chi_vals_n_lstarts)):
+            chi_dir_path = os.path.join(cur_dir_path,
+                                        str(chi_dir_num))
+            adb_opened_w.mkdir(chi_dir_path)
+            chi_dir_num += 1
+            gchi_any_idx_path = self.crt_dir_tree(chi_dir_path,
+                                                  chi_vals_n_lstarts[ind],
+                                                  adb_opened_w,
+                                                  min_vals_n_lstarts_flag)
+            paths_idx_obj[0].append(chi_vals_n_lstarts[ind][0][0])
+            paths_idx_obj[1].append(gchi_any_idx_path)
+        paths_idx_path = self.crt_paths_idx(adb_opened_w,
+                                            paths_idx_obj,
+                                            cur_dir_path)
+        return paths_idx_path
 
     @count_exec_time
     def crt_adb(self) -> None:
         with ZipFile(self.adb_path,
                      mode='w') as adb_opened_w:
-            srtd_chunk, srtd_lstarts = [], []
-            prev_srtd_chunk_start = None
-            name_dupl_num = 1
-            for obj in merge(*map(self.read_presrtd_idx,
-                                  self.presrtd_idxs_opened)):
-                srtd_chunk.append(obj[0])
-                srtd_lstarts.append(obj[1])
-                if len(srtd_chunk) == self.presrt_chunk_elems_quan:
-                    name_dupl_num, chi_dir_name = self.crt_chi_dir(srtd_chunk[0],
-                                                                   prev_srtd_chunk_start,
-                                                                   name_dupl_num,
-                                                                   adb_opened_w)
-                    self.crt_dir_tree(chi_dir_name,
-                                      srtd_chunk,
-                                      srtd_lstarts,
-                                      adb_opened_w)
-                    prev_srtd_chunk_start = srtd_chunk[0]
-                    srtd_chunk.clear()
-                    srtd_lstarts.clear()
-            if srtd_chunk:
-                name_dupl_num, chi_dir_name = self.crt_chi_dir(srtd_chunk[0],
-                                                               prev_srtd_chunk_start,
-                                                               name_dupl_num,
-                                                               adb_opened_w)
-                self.crt_dir_tree(chi_dir_name,
-                                  srtd_chunk,
-                                  srtd_lstarts,
-                                  adb_opened_w)
+            vals_n_lstarts = []
+            chi_dir_num = 1
+            paths_idx_obj = [[], []]
+            for val_n_lstart in merge(*map(self.read_presrtd_idx,
+                                           self.presrtd_idxs_opened)):
+                vals_n_lstarts.append(val_n_lstart)
+                if len(vals_n_lstarts) == self.presrt_chunk_len:
+                    chi_dir_name = str(chi_dir_num)
+                    adb_opened_w.mkdir(chi_dir_name)
+                    chi_dir_num += 1
+                    gchi_any_idx_path = self.crt_dir_tree(chi_dir_name,
+                                                          vals_n_lstarts,
+                                                          adb_opened_w)
+                    paths_idx_obj[0].append(vals_n_lstarts[0][0])
+                    paths_idx_obj[1].append(gchi_any_idx_path)
+                    vals_n_lstarts.clear()
+            if vals_n_lstarts:
+                chi_dir_name = str(chi_dir_num)
+                adb_opened_w.mkdir(chi_dir_name)
+                gchi_any_idx_path = self.crt_dir_tree(chi_dir_name,
+                                                      vals_n_lstarts,
+                                                      adb_opened_w)
+                paths_idx_obj[0].append(vals_n_lstarts[0][0])
+                paths_idx_obj[1].append(gchi_any_idx_path)
+            self.crt_paths_idx(adb_opened_w,
+                               paths_idx_obj)
