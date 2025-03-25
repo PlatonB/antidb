@@ -7,7 +7,7 @@ from antidb.idx import *
 from antidb.prs import *
 
 if __name__ == 'main':
-    __version__ = 'v4.6.0'
+    __version__ = 'v5.0.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -567,6 +567,117 @@ class BedTests(unittest.TestCase):
                   adb_path)
 
 
+class VcfTests(unittest.TestCase):
+    src_vcf = ['##fileformat=VCFv4.1\n',
+               '##source=IlluminaPlatinumGenomes, version: 2016-1.0\n',
+               '##INFO=<ID=MTD,Number=.,Type=String,Description="Methods that call this site pedigree consistently.">\n',
+               '##INFO=<ID=KM,Number=1,Type=String,Description="Minimum normalized k-mer counts">\n',
+               '##INFO=<ID=KFP,Number=1,Type=Integer,Description="K-mer GT failures in the main pedigree">\n',
+               '##INFO=<ID=KFF,Number=1,Type=Integer,Description="K-mer failures in the founders">\n',
+               '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
+               '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tNA12877\n',
+               'chr1\t126113\t.\tC\tA\t.\tPASS\tMTD=isaac_strelka,bwa_freebayes,bwa_platypus,bwa_gatk;KM=17.27;KFP=0;KFF=0\tGT\t1|1\n',
+               'chr1\t567239\t.\tCG\tC\t.\tPASS\tMTD=isaac_strelka,bwa_platypus,bwa_gatk;KM=11.15;KFP=0;KFF=0\tGT\t1|1\n',
+               'chr1\t724137\t.\tTAATGG\tTAATGGAATGGAATGGAATGG,TAATGGAATGG\t.\tPASS\tMTD=bwa_gatk;KM=26.29;KFP=0;KFF=0\tGT\t2|1\n',
+               'chr1\t725516\t.\tA\tAGAATG\t.\tPASS\tMTD=isaac_strelka;KM=13.37;KFP=0;KFF=0\tGT\t0|1\n',
+               'chr1\t753844\t.\tCCT\tC\t.\tPASS\tMTD=isaac_strelka,bwa_platypus;KM=4.21;KFP=0;KFF=0\tGT\t1|0\n',
+               'chr1\t761957\t.\tA\tAT\t.\tPASS\tMTD=isaac_strelka,bwa_freebayes,bwa_platypus,bwa_gatk;KM=6.63;KFP=0;KFF=0\tGT\t1|0\n',
+               'chr1\t763769\t.\tAT\tA,ATT\t.\tPASS\tMTD=bwa_freebayes,bwa_platypus,bwa_gatk;KM=11.26;KFP=0;KFF=0\tGT\t2|1\n',
+               'chr1\t767780\t.\tG\tA\t.\tPASS\tMTD=cgi,bwa_freebayes,bwa_platypus,isaac_strelka,bwa_gatk;KM=11.12;KFP=0;KFF=0\tGT\t1|1\n',
+               'chr1\t768116\t.\tAGTTTT\tAGTTTTGTTTT,A\t.\tPASS\tMTD=bwa_freebayes,bwa_platypus,bwa_gatk;KM=18.37;KFP=0;KFF=0\tGT\t1|2\n',
+               'chr1\t769138\t.\tCAT\tC\t.\tPASS\tMTD=isaac_strelka,bwa_freebayes,bwa_platypus,bwa_gatk;KM=12.00;KFP=0;KFF=0\tGT\t0|1\n',
+               'chr14\t56412076\t.\tG\tGCATACATA\t.\tPASS\tMTD=isaac_strelka,bwa_platypus,bwa_gatk;KM=28.62;KFP=0;KFF=0\tGT\t1|1\n',
+               'chr14\t56422021\t.\tAAAAC\tA\t.\tPASS\tMTD=isaac_strelka,bwa_freebayes,bwa_gatk;KM=9.43;KFP=0;KFF=0\tGT\t0|1\n',
+               'chr14\t56551760\t.\tC\tCTATCTATA,CTATCTATCTATA\t.\tPASS\tMTD=bwa_gatk;KM=5.77;KFP=0;KFF=0\tGT\t1|2\n',
+               'chr14\t56564010\t.\tAACACACACAC\tA,AAC\t.\tPASS\tMTD=bwa_freebayes;KM=38.71;KFP=0;KFF=0\tGT\t2|1\n',
+               'chr14\t56664634\t.\tGACACACAC\tGAC\t.\tPASS\tMTD=bwa_freebayes,bwa_platypus,bwa_gatk;KM=6.83;KFP=0;KFF=0\tGT\t0|1\n',
+               'chr14\t56669715\t.\tCA\tC\t.\tPASS\tMTD=isaac_strelka,bwa_freebayes,bwa_platypus,bwa_gatk;KM=10.85;KFP=0;KFF=0\tGT\t0|1\n',
+               'chr14\t56783534\t.\tT\tC,G\t.\tPASS\tMTD=isaac_strelka,bwa_platypus,bwa_gatk;KM=8.95;KFP=0;KFF=0\tGT\t1|2\n',
+               'chr14\t56868236\t.\tTA\tTAA,T\t.\tPASS\tMTD=bwa_freebayes,bwa_platypus,bwa_gatk;KM=4.00;KFP=0;KFF=0\tGT\t1|2\n',
+               'chr14\t56898904\t.\tTTTCC\tTTTCCTTCC\t.\tPASS\tMTD=bwa_freebayes,bwa_gatk;KM=21.83;KFP=0;KFF=0\tGT\t0|1\n',
+               'chr14\t57002112\t.\tAAGAG\tAAGAGAGAG,A\t.\tPASS\tMTD=bwa_gatk;KM=15.71;KFP=0;KFF=0\tGT\t2|1\n']
+    src_file_path = os.path.join(os.getcwd(),
+                                 'vcf.vcf')
+    db_zst_path = os.path.join(os.getcwd(),
+                               'vcf.vcf.zst')
+
+    def test_pseudo_tabix(self):
+        adb_path = os.path.join(os.getcwd(),
+                                'vcf.vcf.tabix.adb')
+        with open(self.src_file_path, 'w') as src_file_opened:
+            for src_vcf_line in self.src_vcf:
+                src_file_opened.write(src_vcf_line)
+        del_files(self.db_zst_path,
+                  adb_path)
+
+        def get_intervals(vcf_line: str):
+            vcf_row = vcf_line.split('\t')
+            intervals = []
+            for ref_lett_ind in range(len(vcf_row[3])):
+                chrom = vcf_row[0]
+                pos = int(vcf_row[1]) + ref_lett_ind
+                intervals.append([chrom, pos])
+            return tuple(intervals)
+
+        idx_obj = Idx(db_file_path=self.src_file_path,
+                      adb_name_prefix='tabix',
+                      db_line_prs=get_intervals,
+                      adb_srt_rule=SrtRules.natur)
+        idx_obj.idx()
+        prs_obj = Prs(db_file_path=self.src_file_path,
+                      adb_name_prefix='tabix',
+                      adb_srt_rule=SrtRules.natur)
+
+        def trun_vcf_line(vcf_line):
+            return vcf_line.split('\tMTD')[0]
+
+        self.assertEqual(list(map(trun_vcf_line,
+                                  prs_obj.eq(['chr1', 126113],
+                                             ['chr1', 567239],
+                                             ['chr1', 567240]))),
+                         ['chr1\t126113\t.\tC\tA\t.\tPASS',
+                          'chr1\t567239\t.\tCG\tC\t.\tPASS',
+                          'chr1\t567239\t.\tCG\tC\t.\tPASS'])
+        self.assertFalse(list(prs_obj.eq(['chr1', 567241])))
+        self.assertEqual(list(map(trun_vcf_line,
+                                  prs_obj.eq(['chr1', 768116]))),
+                         ['chr1\t768116\t.\tAGTTTT\tAGTTTTGTTTT,A\t.\tPASS'])
+        self.assertEqual(list(map(trun_vcf_line,
+                                  prs_obj.eq(['chr1', 768121]))),
+                         ['chr1\t768116\t.\tAGTTTT\tAGTTTTGTTTT,A\t.\tPASS'])
+        self.assertEqual(list(map(trun_vcf_line,
+                                  prs_obj.rng(['chr1', 0],
+                                              ['chr1', 126113]))),
+                         ['chr1\t126113\t.\tC\tA\t.\tPASS'])
+        self.assertEqual(list(map(trun_vcf_line,
+                                  prs_obj.rng(['chr14', 57002112],
+                                              ['chr14', inf]))),
+                         ['chr14\t57002112\t.\tAAGAG\tAAGAGAGAG,A\t.\tPASS'
+                          for dupl_ind in range(5)])
+        self.assertEqual(list(map(trun_vcf_line,
+                                  prs_obj.rng(['chr14', 56669710],
+                                              ['chr14', 56868240]))),
+                         ['chr14\t56669715\t.\tCA\tC\t.\tPASS',
+                          'chr14\t56669715\t.\tCA\tC\t.\tPASS',
+                          'chr14\t56783534\t.\tT\tC,G\t.\tPASS',
+                          'chr14\t56868236\t.\tTA\tTAA,T\t.\tPASS',
+                          'chr14\t56868236\t.\tTA\tTAA,T\t.\tPASS'])
+        self.assertEqual(list(map(trun_vcf_line,
+                                  prs_obj.rng(['chr1', 769138],
+                                              ['chr14', 56412076]))),
+                         ['chr1\t769138\t.\tCAT\tC\t.\tPASS',
+                          'chr1\t769138\t.\tCAT\tC\t.\tPASS',
+                          'chr1\t769138\t.\tCAT\tC\t.\tPASS',
+                          'chr14\t56412076\t.\tG\tGCATACATA\t.\tPASS'])
+        self.assertFalse(list(prs_obj.rng(['chr1', 126110],
+                                          ['chr1', 126112])))
+        self.assertFalse(list(prs_obj.rng(['chr1', 57002113],
+                                          ['chr1', 57002115])))
+        del_files(self.src_file_path,
+                  self.db_zst_path,
+                  adb_path)
+
+
 class SrtRulesTests(unittest.TestCase):
     srt_rules = SrtRules()
 
@@ -647,6 +758,8 @@ class SrtRulesTests(unittest.TestCase):
                                               dec_delimiter=',',
                                               nums_first=False),
                          [[1.1], [-2.2], [float('-inf'), 'str']])
+        self.assertEqual(self.srt_rules.natur(['chr14', 1, 10]),
+                         [[float('+inf'), 'chr', 14], [1], [10]])
 
     def test_letts_nums_srt_rule(self):
         self.assertEqual(self.srt_rules.letts_nums('rs1'),

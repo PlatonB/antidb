@@ -2,7 +2,7 @@ import re
 from collections.abc import Iterable
 
 if __name__ == 'main':
-    __version__ = 'v5.0.1'
+    __version__ = 'v5.0.2'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -17,7 +17,8 @@ class SrtRules():
             src_row = [src_str_or_row]
         elif isinstance(src_str_or_row,
                         Iterable):
-            src_row = src_str_or_row[:]
+            src_row = list(map(str,
+                               src_str_or_row))
         if dec_delimiter == '.':
             natur_split_cell = r'(-?\d+(?:\.\d*)?(?:[Ee][+-]?\d+)?)'
         elif dec_delimiter == ',':
