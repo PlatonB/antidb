@@ -1,4 +1,6 @@
 # antidb
+_antidb_ is the opposite of the typical/enterprise-oriented DBMSs.
+
 ## Quick start
 ```
 pip3 install antidb
@@ -43,7 +45,15 @@ NC_000014.9	67588896	rs4902496	C	G,T	.	.	RS=4902496;dbSNPBuildID=111;SSR=0;GENEI
 ('get_rsid_lines', None, '0:00:00.015202')
 ```
 
-## App example
+## Features
+- You spend time indexing once and then run queries in hundredths of a second.
+- Instead of a database, it's your big multi-line text and accompanying index file(s). They are easy to publish or write to a USB flash drive.
+- Compared to _tabix_, there is no need to sort the data yourself before indexing.
+- You write the function for pulling indexable values yourself: complete freedom to choose what and how to index. Note that queried values must correspond (e.g., by data type) to the values returned by your indexing function.
+- The sort key is also created by you. Just don't forget to consider the sort order when making queries.
+- The _antidb_ syntax is extremely simple and doesn't require bulky API docs. Simply look at the example scripts/tools here.
+
+## App examples
 ### Bioinformatic annotator template
 ```
 # autopep8: off
@@ -165,26 +175,26 @@ if __name__ == '__main__':
         [
             "presrt_idxs",
             null,
-            "0:39:39.194931"
+            "0:41:02.303547"
         ],
         [
             "crt_adb",
             null,
-            "0:00:02.279974"
+            "0:00:03.331788"
         ]
     ],
     "rsmerged_idx": [
         [
             "presrt_idxs",
             null,
-            "0:03:33.514475"
+            "0:04:37.101617"
         ],
         [
             "crt_adb",
             null,
-            "0:01:27.418363"
+            "0:02:00.120555"
         ]
     ],
-    "ann": "0:01:11.196938"
+    "ann": "0:00:24.904676"
 }
 ```
