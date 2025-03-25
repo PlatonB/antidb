@@ -1,6 +1,4 @@
 # antidb
-_antidb_ is the opposite of the typical/enterprise-oriented DBMSs.
-
 ## Quick start
 ```
 pip3 install antidb
@@ -46,8 +44,9 @@ NC_000014.9	67588896	rs4902496	C	G,T	.	.	RS=4902496;dbSNPBuildID=111;SSR=0;GENEI
 ```
 
 ## Features
-- You spend time indexing once and then run queries in hundredths of a second.
-- Instead of a database, it's your big multi-line text and accompanying index file(s). They are easy to publish or write to a USB flash drive.
+- As in classical DBMSs, you spend time indexing once and then run queries in hundredths of a second.
+- Designed on a laptop for laptops. It is unlikely to overflow RAM. There is such a risk when indexing, but certainly not when parsing.
+- Instead of a database, there is your large multi-line text file and accompanying index file(s). These are easy to publish or write to a USB drive.
 - Compared to _tabix_, there is no need to sort the data yourself before indexing.
 - You write the function for pulling indexable values yourself: complete freedom to choose what and how to index. Note that queried values must correspond (e.g., by data type) to the values returned by your indexing function.
 - The sort key is also created by you. Just don't forget to consider the sort order when making queries.
@@ -55,6 +54,8 @@ NC_000014.9	67588896	rs4902496	C	G,T	.	.	RS=4902496;dbSNPBuildID=111;SSR=0;GENEI
 
 ## App examples
 ### Bioinformatic annotator template
+It would seem that finding rsIDs by rsIDs is easy. But, unlike genomic coordinates, rsIDs are quite often updated. Therefore, rsIDs should be queried by dbSNP, and in case of failure - by the source of rsID synonyms with further attempt to find a synonym again by dbSNP.
+
 ```
 # autopep8: off
 import sys; sys.dont_write_bytecode = True
@@ -169,6 +170,8 @@ if __name__ == '__main__':
 
 #### Performance measurement results
 ##### Annotation of 2842 SNPs by dbSNP VCF and refsnp-merged JSON
+The calculations were done on a Maibenben P687 laptop with an AMD Ryzen 7 8845HS processor and 32GB RAM. In `*_idx` is the time of indexing steps, in `ann` is the search time.
+
 ```
 {
     "dbsnp_idx": [
