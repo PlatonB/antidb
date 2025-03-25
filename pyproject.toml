@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "antidb"
-version = "2025.3.19"
+version = "2025.3.26"
 authors = [
     { name="Platon Bykadorov", email="platon.work@gmail.com" },
 ]
