@@ -20,7 +20,7 @@ from pyzstd import (CParameter,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v6.0.1'
+    __version__ = 'v6.1.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -105,16 +105,14 @@ class Idx(SrtRules):
                     db_zst_opened.write(db_file_chunk)
 
     def presrt_idx(self,
-                   chunk: list,
-                   line_starts: list) -> None:
-        presrtd_data = sorted(zip(chunk,
-                                  line_starts))
+                   vals_n_lstarts: list) -> None:
+        vals_n_lstarts.sort()
         presrtd_idx_opened = TemporaryFile(dir=self.temp_dir_path)
         self.presrtd_idxs_opened.append(presrtd_idx_opened)
-        dump(len(presrtd_data),
+        dump(len(vals_n_lstarts),
              presrtd_idx_opened)
-        for obj in presrtd_data:
-            dump(obj,
+        for val_n_start in vals_n_lstarts:
+            dump(val_n_start,
                  presrtd_idx_opened,
                  HIGHEST_PROTOCOL)
         presrtd_idx_opened.seek(0)
@@ -128,14 +126,13 @@ class Idx(SrtRules):
                     db_zst_opened.seek(db_zst_lstart)
                     break
             self.presrtd_idxs_opened.clear()
-            chunk, line_starts = [], []
+            vals_n_lstarts = []
             while True:
                 db_zst_lstart = db_zst_opened.tell()
                 db_zst_line = db_zst_opened.readline().rstrip()
                 if not db_zst_line:
-                    if chunk:
-                        self.presrt_idx(chunk,
-                                        line_starts)
+                    if vals_n_lstarts:
+                        self.presrt_idx(vals_n_lstarts)
                     break
                 db_line_prs_out = self.db_line_prs(db_zst_line,
                                                    **self.db_line_prs_kwargs)
@@ -143,18 +140,16 @@ class Idx(SrtRules):
                     continue
                 elif type(db_line_prs_out) is tuple:
                     for db_line_prs_out_elem in db_line_prs_out:
-                        chunk.append(self.adb_srt_rule(db_line_prs_out_elem,
-                                                       **self.adb_srt_rule_kwargs))
-                        line_starts.append(db_zst_lstart)
+                        vals_n_lstarts.append([self.adb_srt_rule(db_line_prs_out_elem,
+                                                                 **self.adb_srt_rule_kwargs),
+                                               db_zst_lstart])
                 else:
-                    chunk.append(self.adb_srt_rule(db_line_prs_out,
-                                                   **self.adb_srt_rule_kwargs))
-                    line_starts.append(db_zst_lstart)
-                if len(chunk) == self.presrt_chunk_len:
-                    self.presrt_idx(chunk,
-                                    line_starts)
-                    chunk.clear()
-                    line_starts.clear()
+                    vals_n_lstarts.append([self.adb_srt_rule(db_line_prs_out,
+                                                             **self.adb_srt_rule_kwargs),
+                                           db_zst_lstart])
+                if len(vals_n_lstarts) == self.presrt_chunk_len:
+                    self.presrt_idx(vals_n_lstarts)
+                    vals_n_lstarts.clear()
 
     @staticmethod
     def read_presrtd_idx(presrtd_idx_opened: TemporaryFile) -> Generator:
