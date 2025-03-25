@@ -46,15 +46,16 @@ NC_000014.9	67588896	rs4902496	C	G,T	.	.	RS=4902496;dbSNPBuildID=111;SSR=0;GENEI
 ## Features
 - As in classical DBMSs, you spend time indexing once and then run queries in hundredths of a second.
 - Designed on a laptop for laptops. It is unlikely to overflow RAM. There is such a risk when indexing, but certainly not when parsing.
-- Instead of a database, there is your large multi-line text file and accompanying index file(s). These are easy to publish or write to a USB drive.
-- Compared to _tabix_, there is no need to sort the data yourself before indexing.
-- You write the function for pulling indexable values yourself: complete freedom to choose what and how to index. Note that queried values must correspond (e.g., by data type) to the values returned by your indexing function.
+- Instead of the typical database hidden in the system directory, you will see an index file neighboring your multiline text file. It's easy to publish them or save to a USB drive.
+- Compared to _[tabix](https://www.htslib.org/doc/tabix.html)_, there is no need to sort the data yourself before indexing.
+- You write the function for pulling indexable values yourself. This means complete freedom to choose what and how to index. Note that queried values must correspond (e.g., by data type) to the values returned by your indexing function.
 - The sort key is also created by you. Just don't forget to consider the sort order when making queries.
+- It is possible to create phantom indexes, i.e. when the values themselves are not physically present in the file, but they are present in the index. For example, the index may contain the lengths of reference allele sequences calculated for deletions.
 - The _antidb_ syntax is extremely simple and doesn't require bulky API docs. Simply look at the example scripts/tools here.
 
 ## App examples
 ### Bioinformatic annotator template
-It would seem that finding rsIDs by rsIDs is easy. But, unlike genomic coordinates, rsIDs are quite often updated. Therefore, rsIDs should be queried by dbSNP, and in case of failure - by the source of rsID synonyms with further attempt to find a synonym again by dbSNP.
+It would seem that finding rsIDs by rsIDs is easy. But, unlike genomic coordinates, rsIDs are quite often updated. Therefore, rsIDs should be queried by dbSNP, and in case of failure - by the source of rsID synonyms with further attempt to find a synonym again by dbSNP. This code demonstrates how _antidb_ helps quickly retrieve data from two sources, easily switching between them when needed.
 
 ```
 # autopep8: off
