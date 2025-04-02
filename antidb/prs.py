@@ -17,7 +17,7 @@ from pyzstd import (SeekableZstdFile,
                     ZstdFile)
 
 if __name__ == 'main':
-    __version__ = 'v6.0.0'
+    __version__ = 'v6.1.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -111,12 +111,19 @@ class Prs(Idx):
                                             query_end)
         for neces_lstarts_idx_path in self.walk_dir_tree(prepd_query_bords):
             neces_lstarts_idx_obj = self.read_lstarts_idx(neces_lstarts_idx_path)
-            start_lstart_ind = bisect_left(neces_lstarts_idx_obj[0],
-                                           prepd_query_bords[0])
-            if start_lstart_ind == len(neces_lstarts_idx_obj[0]):
+            if prepd_query_bords[0] <= neces_lstarts_idx_obj[0][0]:
+                start_lstart_ind = 0
+            else:
+                start_lstart_ind = bisect_left(neces_lstarts_idx_obj[0],
+                                               prepd_query_bords[0])
+            neces_lstarts_quan = len(neces_lstarts_idx_obj[0])
+            if start_lstart_ind == neces_lstarts_quan:
                 continue
-            end_lstart_ind = bisect_right(neces_lstarts_idx_obj[0],
-                                          prepd_query_bords[1]) - 1
+            if neces_lstarts_idx_obj[0][-1] <= prepd_query_bords[1]:
+                end_lstart_ind = neces_lstarts_quan - 1
+            else:
+                end_lstart_ind = bisect_right(neces_lstarts_idx_obj[0],
+                                              prepd_query_bords[1]) - 1
             for lstart_ind in range(start_lstart_ind,
                                     end_lstart_ind + 1):
                 self.db_zst_opened_r.seek(neces_lstarts_idx_obj[1][lstart_ind])

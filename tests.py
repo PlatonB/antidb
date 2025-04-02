@@ -7,7 +7,7 @@ from antidb.idx import *
 from antidb.prs import *
 
 if __name__ == 'main':
-    __version__ = 'v5.0.0'
+    __version__ = 'v5.1.0'
     __authors__ = [{'name': 'Platon Bykadorov',
                     'email': 'platon.work@gmail.com',
                     'years': '2023-2025'}]
@@ -673,6 +673,50 @@ class VcfTests(unittest.TestCase):
                                           ['chr1', 126112])))
         self.assertFalse(list(prs_obj.rng(['chr1', 57002113],
                                           ['chr1', 57002115])))
+        del_files(self.src_file_path,
+                  self.db_zst_path,
+                  adb_path)
+
+    def test_mtd(self):
+        adb_path = os.path.join(os.getcwd(),
+                                'vcf.vcf.mtd.adb')
+        with open(self.src_file_path, 'w') as src_file_opened:
+            for src_vcf_line in self.src_vcf:
+                src_file_opened.write(src_vcf_line)
+        del_files(self.db_zst_path,
+                  adb_path)
+
+        def get_mtds(vcf_line: str):
+            mtds = re.split(r'[,_]',
+                            re.search(r'(?<=MTD=)\D+(?=;)',
+                                      vcf_line).group())
+            return tuple(set(mtds))
+
+        idx_obj = Idx(db_file_path=self.src_file_path,
+                      adb_name_prefix='mtd',
+                      db_line_prs=get_mtds,
+                      adb_srt_rule=lambda val: val,
+                      presrt_chunk_len=7,
+                      lstarts_idx_div=5,
+                      lstarts_idx_len=3)
+        idx_obj.idx()
+        prs_obj = Prs(db_file_path=self.src_file_path,
+                      adb_name_prefix='mtd',
+                      adb_srt_rule=lambda val: val)
+        self.assertEqual(list(map(lambda vcf_line:
+                                  vcf_line.split(';KM')[0],
+                                  prs_obj.eq('cgi'))),
+                         ['chr1\t767780\t.\tG\tA\t.\tPASS\tMTD=cgi,bwa_freebayes,bwa_platypus,isaac_strelka,bwa_gatk'])
+        self.assertEqual(len(list(prs_obj.eq('isaac'))), 11)
+        self.assertEqual(len(list(prs_obj.eq('strelka'))), 11)
+        self.assertEqual(len(list(prs_obj.eq('bwa'))), 19)
+        self.assertEqual(len(list(prs_obj.eq('freebayes'))), 12)
+        self.assertEqual(len(list(prs_obj.eq('platypus'))), 13)
+        self.assertEqual(len(list(prs_obj.eq('gatk'))), 17)
+        self.assertEqual(len(list(prs_obj.rng('bwa', 'strelka'))), 84)
+        self.assertEqual(len(list(prs_obj.rng('aaa', 'zzzzzzz'))), 84)
+        self.assertEqual(len(list(prs_obj.rng('freebayes', 'gatk'))), 29)
+        self.assertEqual(len(list(prs_obj.rng('isaac', 'isaac'))), 11)
         del_files(self.src_file_path,
                   self.db_zst_path,
                   adb_path)
