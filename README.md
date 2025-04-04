@@ -53,6 +53,12 @@ NC_000014.9	67588896	rs4902496	C	G,T	.	.	RS=4902496;dbSNPBuildID=111;SSR=0;GENEI
 - It is possible to create phantom indexes, i.e. when the values themselves are not physically present in the file, but they are present in the index. For example, the index may contain the lengths of reference allele sequences calculated for deletions.
 - The _antidb_ syntax is extremely simple and doesn't require bulky API docs. Simply look at the example scripts/tools here.
 
+## Query syntax
+It is designed that _antidb_ supports only the simplest queries. A good work scenario is when you reduce the data by simple query to RAM-friendly sizes and post-process it in _pandas_ or something else.
+
+`Prs.eq(*queries)`: creates a generator capable to return lines of indexed file containing element that exactly match your argument. Each argument is a separate query. If nothing matches the query, the generator will not throw an exception, but just not return anything.
+`Prs.rng(query_start, query_end)`: creates a generator capable to return lines of indexed file containing elements in the range you specify. Performance note: queries covering a large quantity of lines may run slowly.
+
 ## App examples
 ### Bioinformatic annotator template
 It would seem that finding rsIDs by rsIDs is easy. But, unlike genomic coordinates, rsIDs are quite often updated. Therefore, rsIDs should be queried by dbSNP, and in case of failure - by the source of rsID synonyms with further attempt to find a synonym again by dbSNP. This code demonstrates how _antidb_ helps quickly retrieve data from two sources, easily switching between them when needed.
