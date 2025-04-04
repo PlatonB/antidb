@@ -57,6 +57,7 @@ NC_000014.9	67588896	rs4902496	C	G,T	.	.	RS=4902496;dbSNPBuildID=111;SSR=0;GENEI
 It is designed that _antidb_ supports only the simplest queries. A good work scenario is when you reduce the data by simple query to RAM-friendly sizes and post-process it in _pandas_ or something else.
 
 `Prs.eq(*queries)`: creates a generator capable to return lines of indexed file containing element that exactly match your argument. Each argument is a separate query. If nothing matches the query, the generator will not throw an exception, but just not return anything.
+
 `Prs.rng(query_start, query_end)`: creates a generator capable to return lines of indexed file containing elements in the range you specify. Performance note: queries covering a large quantity of lines may run slowly.
 
 ## App examples
